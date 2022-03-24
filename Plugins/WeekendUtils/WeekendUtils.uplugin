@@ -1,0 +1,25 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "WeekendUtils",
+	"Description": "Shared utilities and stuff.",
+	"Category": "Other",
+	"CreatedBy": "Benjamin Barz",
+	"CreatedByURL": "https://github.com/barzb/UnrealWeekendUtils",
+	"DocsURL": "https://github.com/barzb/UnrealWeekendUtils",
+	"MarketplaceURL": "",
+	"SupportURL": "https://github.com/barzb/UnrealWeekendUtils",
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": true,
+	"EnabledByDefault": true,
+	"Modules": [
+		{
+			"Name": "WeekendUtils",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}
