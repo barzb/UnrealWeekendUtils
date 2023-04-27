@@ -1,4 +1,11 @@
-// (c) by Benjamin Barz
+/*
+ * Copyright (C) 2023 by Benjamin Barz in cooperation with Nine Worlds Studios GmbH.
+ * 
+ * This file is part of the WeekendUtils UE5 Plugin.
+ * 
+ * Distributed under the MIT License. See accompanying file LICENSE or view online at
+ * {@link https://github.com/barzb/UnrealWeekendUtils/blob/main/LICENSE}
+ */
 
 using UnrealBuildTool;
 
@@ -8,24 +15,22 @@ public class WeekendUtils : ModuleRules
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicIncludePaths.AddRange(
-			new string[]
-			{
-				// ... add public include paths required here ...
-			}
-		);
+		SetupGameplayDebuggerSupport(Target);
 
-		PrivateIncludePaths.AddRange(
-			new string[]
-			{
-				// ... add other private include paths required here ...
-			}
-		);
+		//PublicIncludePaths.AddRange();
+		// ... add public include paths required here ...
+
+		//PrivateIncludePaths.AddRange();
+		// ... add other private include paths required here ...
+
+		//DynamicallyLoadedModuleNames.AddRange();
+		// ... add any modules that your module loads dynamically here ...
 
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
 				"Core",
+				"StructUtils",
 				// ... add other public dependencies that you statically link with here ...
 			}
 		);
@@ -39,22 +44,5 @@ public class WeekendUtils : ModuleRules
 				// ... add private dependencies that you statically link with here ...
 			}
 		);
-
-		DynamicallyLoadedModuleNames.AddRange(
-			new string[]
-			{
-				// ... add any modules that your module loads dynamically here ...
-			}
-		);
-
-		if (Target.bBuildDeveloperTools || (Target.Configuration != UnrealTargetConfiguration.Shipping && Target.Configuration != UnrealTargetConfiguration.Test))
-		{
-			PublicDependencyModuleNames.Add("GameplayDebugger");
-			PublicDefinitions.Add("WITH_GAMEPLAY_DEBUGGER=1");
-		}
-		else
-		{
-			PublicDefinitions.Add("WITH_GAMEPLAY_DEBUGGER=0");
-		}
 	}
 }

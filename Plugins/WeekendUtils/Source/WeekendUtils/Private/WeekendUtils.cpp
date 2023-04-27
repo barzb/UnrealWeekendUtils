@@ -1,15 +1,23 @@
-// (c) by Benjamin Barz
+///////////////////////////////////////////////////////////////////////////////////////
+/// Copyright (C) 2023 by Benjamin Barz in cooperation with Nine Worlds Studios GmbH.
+///
+/// This file is part of the WeekendUtils UE5 Plugin.
+///
+/// Distributed under the MIT License. See accompanying file LICENSE.
+///
+///////////////////////////////////////////////////////////////////////////////////////
 
 #include "WeekendUtils.h"
 
 #if WITH_GAMEPLAY_DEBUGGER
-#include "GameplayDebugger.h"
-#include "GameplayDebugger/Extensions/GameplayDebuggerExtension_SelfDebugActor.h"
-#include "GameplayDebugger/GameplayDebuggerUtils.h"
-#include "ServiceLocator/Debug/GameplayDebuggerCategory_ServiceLocator.h"
+ #include "GameplayDebugger.h"
+ #include "GameplayDebugger/Extensions/GameplayDebuggerExtension_SelfDebugActor.h"
+ #include "GameplayDebugger/GameplayDebuggerUtils.h"
 #endif
 
 #define LOCTEXT_NAMESPACE "FWeekendUtilsModule"
+
+DEFINE_LOG_CATEGORY(LogGameService);
 
 void FWeekendUtilsModule::StartupModule()
 {
@@ -23,10 +31,6 @@ void FWeekendUtilsModule::StartupModule()
 		// Extensions:
 		FGameplayDebugger::RegisterExtension<FGameplayDebuggerExtension_SelfDebugActor>();
 		GameplayDebugger.NotifyExtensionsChanged();
-
-		// Categories:
-		FGameplayDebugger::RegisterCategory<FGameplayDebuggerCategory_ServiceLocator>();
-		GameplayDebugger.NotifyCategoriesChanged();
 	}
 #endif
 }
@@ -44,14 +48,10 @@ void FWeekendUtilsModule::ShutdownModule()
 		// Extension:
 		FGameplayDebugger::UnregisterExtension<FGameplayDebuggerExtension_SelfDebugActor>();
 		GameplayDebugger.NotifyExtensionsChanged();
-
-		// Categories:
-		FGameplayDebugger::UnregisterCategory<FGameplayDebuggerCategory_ServiceLocator>();
-		GameplayDebugger.NotifyCategoriesChanged();
 	}
 #endif
 }
 
 #undef LOCTEXT_NAMESPACE
-	
+
 IMPLEMENT_MODULE(FWeekendUtilsModule, WeekendUtils)

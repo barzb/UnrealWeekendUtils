@@ -1,4 +1,11 @@
-﻿// (c) by Benjamin Barz
+﻿///////////////////////////////////////////////////////////////////////////////////////
+/// Copyright (C) 2023 by Benjamin Barz in cooperation with Nine Worlds Studios GmbH.
+///
+/// This file is part of the WeekendUtils UE5 Plugin.
+///
+/// Distributed under the MIT License. See accompanying file LICENSE.
+///
+///////////////////////////////////////////////////////////////////////////////////////
 
 #if WITH_GAMEPLAY_DEBUGGER
 

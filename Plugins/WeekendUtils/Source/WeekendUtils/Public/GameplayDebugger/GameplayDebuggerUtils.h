@@ -1,4 +1,11 @@
-﻿// (c) by Benjamin Barz
+﻿///////////////////////////////////////////////////////////////////////////////////////
+/// Copyright (C) 2023 by Benjamin Barz in cooperation with Nine Worlds Studios GmbH.
+///
+/// This file is part of the WeekendUtils UE5 Plugin.
+///
+/// Distributed under the MIT License. See accompanying file LICENSE.
+///
+///////////////////////////////////////////////////////////////////////////////////////
 
 #pragma once
 
@@ -17,7 +24,7 @@
 namespace FGameplayDebugger
 {
 	template<typename T, typename TEnableIf<TIsDerivedFrom<T, FGameplayDebuggerExtension>::IsDerived, bool>::Type = true>
-static TSharedRef<FGameplayDebuggerExtension> MakeInstance()
+	static TSharedRef<FGameplayDebuggerExtension> MakeInstance()
 	{
 		return MakeShareable(new T());
 	}

@@ -1,4 +1,4 @@
-///////////////////////////////////////////////////////////////////////////////////////
+﻿///////////////////////////////////////////////////////////////////////////////////////
 /// Copyright (C) 2023 by Benjamin Barz in cooperation with Nine Worlds Studios GmbH.
 ///
 /// This file is part of the WeekendUtils UE5 Plugin.
@@ -12,14 +12,9 @@
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogGameService, Log, All);
-DECLARE_STATS_GROUP(TEXT("Game Service"), STATGROUP_GameService, STATCAT_Advanced);
-
-class FWeekendUtilsModule : public IModuleInterface
+class FWeekendUtilsTestsModule : public IModuleInterface
 {
 public:
-
-	/** IModuleInterface implementation */
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
 };
