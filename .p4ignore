@@ -1,0 +1,18 @@
+# Ignore project-specific files
+Build/*
+!Build/Scripts/*
+Build/Scripts/*/obj/*
+Build/Scripts/**/*.props
+DerivedDataCache/*
+Binaries/*
+Intermediate/*
+Saved/*
+Plugins/Developer/RiderLink/*
+
+*.sln
+*.sln.DotSettings.user
+.vs
+.idea
+*.dll
+*.modules
+*.pdb
