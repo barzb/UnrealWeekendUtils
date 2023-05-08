@@ -55,7 +55,7 @@ protected:
 	bool bReplicates = false;
 
 	/** @returns whether this service instance has network authority (= server). #todo-multiplayer CURRENTLY NOT SUPPORTED */
-	bool HasAuthority() const { return false; }
+	bool HasAuthority() const { return true; }
 };
 
 using FGameServiceClass = TSubclassOf<UObject>;

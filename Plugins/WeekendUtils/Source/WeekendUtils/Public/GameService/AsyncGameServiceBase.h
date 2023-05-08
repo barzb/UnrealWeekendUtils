@@ -38,18 +38,6 @@ public:
 	/** Calls provided callback right after this service is fully started and running - or immediately if already running. */
 	void WaitUntilServiceIsRunning(FOnAsyncGameServiceStarted Callback);
 
-protected:
-	enum class EAsyncServiceStatus : uint8
-	{
-		Inactive = 0,
-		Starting = 1,
-		Running = 2,
-		Stopping = 3,
-	} CurrentStatus = EAsyncServiceStatus::Inactive;
-
-	/** When enabled by derived class, the @BeginServiceStart() call will be deferred until all configured dependencies are available. */
-	bool bWaitForDependenciesBeforeStarting = true;
-
 	/**
 	 * Called when the service starts to kick off the deferred starting process.
 	 * Derived classes must manually call @FinishServiceStart() when they are fully started.
@@ -67,6 +55,18 @@ protected:
 	 */
 	virtual void BeginServiceShutdown(bool bIsWorldTearingDown) PURE_VIRTUAL(BeginServiceShutdown);
 	void FinishServiceShutdown();
+
+protected:
+	enum class EAsyncServiceStatus : uint8
+	{
+		Inactive = 0,
+		Starting = 1,
+		Running = 2,
+		Stopping = 3,
+	} CurrentStatus = EAsyncServiceStatus::Inactive;
+
+	/** When enabled by derived class, the @BeginServiceStart() call will be deferred until all configured dependencies are available. */
+	bool bWaitForDependenciesBeforeStarting = true;
 
 private:
 	TArray<FOnAsyncGameServiceStarted> PendingServiceStartCallbacks;

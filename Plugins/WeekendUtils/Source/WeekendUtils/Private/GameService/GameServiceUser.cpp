@@ -11,6 +11,7 @@
 
 #include "GameService/GameServiceBase.h"
 #include "GameService/GameServiceManager.h"
+#include "Initialization/WorldGameServiceRunner.h"
 #include "WeekendUtils.h"
 
 #include "Subsystems/EngineSubsystem.h"
@@ -26,6 +27,11 @@ const TArray<FGameServiceUser::FGameServiceClass>& FGameServiceUser::GetServiceC
 const TArray<TSubclassOf<USubsystem>>& FGameServiceUser::GetSubsystemClassDependencies() const
 {
 	return SubsystemDependencies.ToArray();
+}
+
+const TArray<TSubclassOf<USubsystem>>& FGameServiceUser::GetOptionalSubsystemClassDependencies() const
+{
+	return OptionalSubsystemDependencies.ToArray();
 }
 
 bool FGameServiceUser::AreAllDependenciesReady(const UObject* ServiceUser) const
@@ -51,6 +57,17 @@ bool FGameServiceUser::AreSubsystemDependenciesReady(const UObject* ServiceUser)
 		TWeakObjectPtr<const USubsystem> SubsystemInstance = FindSubsystemDependency(ServiceUser, *SubsystemClass);
 		if (!SubsystemInstance.IsValid())
 			return false;
+	}
+	for (const TSubclassOf<USubsystem>& SubsystemClass : OptionalSubsystemDependencies.ToArray())
+	{
+		TWeakObjectPtr<const USubsystem> SubsystemInstance = FindSubsystemDependency(ServiceUser, *SubsystemClass);
+		if (!SubsystemInstance.IsValid())
+		{
+			// Optional subsystems might not be available in the current environment, skip those,
+			// because we consider them "ready":
+			if (SubsystemClass->GetDefaultObject<USubsystem>()->ShouldCreateSubsystem(nullptr))
+				return false;
+		}
 	}
 	return true;
 }
@@ -86,12 +103,54 @@ void FGameServiceUser::WaitForDependencies(const UObject* ServiceUser, TFunction
 	WaitForDependencies(ServiceUser, FOnWaitingFinished::CreateWeakLambda(ServiceUser, Callback));
 }
 
+void FGameServiceUser::InitializeWorldSubsystemDependencies_Internal(FSubsystemCollectionBase& SubsystemCollection)
+{
+	SubsystemCollection.InitializeDependency<UWorldGameServiceRunner>();
+	for (const TSubclassOf<USubsystem>& SubsystemDependency : SubsystemDependencies.ToArray())
+	{
+		if (SubsystemDependency->IsChildOf<UWorldSubsystem>())
+		{
+			SubsystemCollection.InitializeDependency(SubsystemDependency);
+		}
+	}
+	for (const TSubclassOf<USubsystem>& SubsystemDependency : OptionalSubsystemDependencies.ToArray())
+	{
+		if (SubsystemDependency->IsChildOf<UWorldSubsystem>())
+		{
+			SubsystemCollection.InitializeDependency(SubsystemDependency);
+		}
+	}
+}
+
+UObject* FGameServiceUser::UseGameService_Internal(const UObject* ServiceUser, const TSubclassOf<UObject>& ServiceClass) const
+{
+	return &UseGameService(ServiceUser, ServiceClass);
+}
+
+UObject* FGameServiceUser::FindOptionalGameService_Internal(const FGameServiceClass& ServiceClass) const
+{
+	const UGameServiceManager* ServiceManager = UGameServiceManager::GetPtr();
+	return (IsValid(ServiceManager) ? ServiceManager->FindStartedServiceInstance(ServiceClass) : nullptr);
+}
+
 UGameServiceBase& FGameServiceUser::UseGameService(const UObject* ServiceUser, const FGameServiceClass& ServiceClass) const
 {
 	// (!) ServiceDependencies must be registered for GameServiceUsers.
 	ensureMsgf(ServiceDependencies.Contains(ServiceClass),
 		TEXT("UseGameService<%s>() was called, but service is not registered as dependency."),
 		*ServiceClass->GetName());
+
+	// (!) World subsystem service users should call InitializeWorldSubsystemDependencies() before accessing
+	// game services to ensure the used services were configured correctly before.
+	if (ServiceUser->IsA<UWorldSubsystem>())
+	{
+		const UWorldGameServiceRunner* ServiceRunner = ServiceUser->GetWorld()->GetSubsystem<UWorldGameServiceRunner>();
+		const bool bServiceRunnerIsInitialized = (IsValid(ServiceRunner) && ServiceRunner->IsInitialized());
+		ensureMsgf(bServiceRunnerIsInitialized,
+			TEXT("%s is a UWorldSubsystem trying to use game services before the UWorldGameServiceRunner was initialized. ")
+			TEXT("Please call InitializeWorldSubsystemDependencies() before using services."),
+			*ServiceUser->GetClass()->GetName());
+	}
 
 	UGameServiceManager& ServiceManager = UGameServiceManager::Get();
 
@@ -111,9 +170,9 @@ TWeakObjectPtr<UGameServiceBase> FGameServiceUser::FindOptionalGameService(const
 
 TWeakObjectPtr<USubsystem> FGameServiceUser::FindSubsystemDependency(const UObject* ServiceUser, const TSubclassOf<USubsystem>& SubsystemClass) const
 {
-	// (!) SubsystemDependencies should be registered for GameServiceUsers, but not as strictly as ServiceDependencies.
-	UE_CLOG(!SubsystemDependencies.Contains(SubsystemClass), LogGameService, Warning,
-		TEXT("ServiceUser %s accesses %s, which was never configured as SubsystemDependency"),
+	// (!) SubsystemDependencies should be registered for GameServiceUsers, but not as strictly as ServiceDependencies, so only log a warning:
+	const bool bWarnAboutMissingConfig = (!SubsystemDependencies.Contains(SubsystemClass) && !OptionalSubsystemDependencies.Contains(SubsystemClass));
+	UE_CLOG(bWarnAboutMissingConfig, LogGameService, Warning, TEXT("ServiceUser %s accesses %s, which was never configured as SubsystemDependency"),
 		*GetNameSafe(ServiceUser), *GetNameSafe(SubsystemClass));
 
 	auto Sanitize = [SubsystemClass](USubsystem* Subsystem) -> TWeakObjectPtr<USubsystem>

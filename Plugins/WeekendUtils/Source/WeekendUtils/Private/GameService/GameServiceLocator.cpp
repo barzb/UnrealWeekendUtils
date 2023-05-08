@@ -1,16 +1,23 @@
-﻿// (c) 2023 Nine Worlds Studios GmbH. All rights reserved.
+﻿///////////////////////////////////////////////////////////////////////////////////////
+/// Copyright (C) 2023 by Benjamin Barz in cooperation with Nine Worlds Studios GmbH.
+///
+/// This file is part of the WeekendUtils UE5 Plugin.
+///
+/// Distributed under the MIT License. See accompanying file LICENSE.
+///
+///////////////////////////////////////////////////////////////////////////////////////
 
 #include "GameService/GameServiceLocator.h"
 
 #include "GameService/GameServiceBase.h"
 #include "GameService/GameServiceManager.h"
 
-UObject* UGameServiceLocator::FindService_ByInterfaceClass(const TSubclassOf<UInterface>& ServiceInterfaceClass)
+UObject* UGameServiceLocator::FindService_ByInterfaceClass(TSubclassOf<UInterface> ServiceInterfaceClass)
 {
 	return FindServiceInternal(*ServiceInterfaceClass);
 }
 
-UObject* UGameServiceLocator::FindService_ByGameServiceClass(const TSubclassOf<UGameServiceBase>& ServiceClass)
+UObject* UGameServiceLocator::FindService_ByGameServiceClass(TSubclassOf<UGameServiceBase> ServiceClass)
 {
 	return FindServiceInternal(*ServiceClass);
 }

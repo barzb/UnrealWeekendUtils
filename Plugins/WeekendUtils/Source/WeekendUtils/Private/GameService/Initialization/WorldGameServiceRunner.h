@@ -14,6 +14,8 @@
 
 #include "WorldGameServiceRunner.generated.h"
 
+class UGameServiceConfig;
+
 /**
  * The singleton instance of this subsystem for each world will take care of maintaining the
  * game service world in cooperation with the persistent @UGameServiceManager.
@@ -40,8 +42,11 @@ public:
 	virtual void Deinitialize() override;
 	// --
 
+	/** Sets a specific @UGameServiceConfig instance to be used when the next world is starting. */
+	static void SetServiceConfigForNextWorld(UGameServiceConfig& ServiceConfig);
+
 private:
-	void RegisterAutoServiceConfig();
+	void RegisterAutoServiceConfigs();
 	void StartRegisteredServices();
 	static void TickRunningServices(float DeltaTime);
 	static TArray<TSubclassOf<UWorldSubsystem>> GatherWorldSubsystemDependencies();

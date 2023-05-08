@@ -13,6 +13,7 @@
 #include "AutomationTest/AutomationTestWorld.h"
 #include "AutomationTest/Mocks/SubsystemMocks.h"
 #include "GameService/GameServiceConfig.h"
+#include "GameService/GameServiceManager.h"
 #include "GameService/GameServiceUser.h"
 #include "Mocks/GameServiceMocks.h"
 #include "Mocks/GameServiceUserMocks.h"
@@ -32,8 +33,10 @@ WE_END_DEFINE_SPEC(GameServiceUser)
 		TestWorld = MakeShared<FScopedAutomationTestWorld>(SpecTestWorldName);
 		TestWorld->InitializeGame();
 
-		UGameServiceConfig::CreateForWorld(TestWorld->AsRef(), GAMESERVICE_PRIO_MAX, [](UGameServiceConfig& Config)
+		UGameServiceManager::Get().ClearServiceRegister();
+		UGameServiceConfig::CreateForWorld(TestWorld->AsRef(), [](UGameServiceConfig& Config)
 		{
+			Config.SetPriority(100);
 			Config.AddSingletonService<UVoidService>();
 			Config.AddSingletonService<IMockGameServiceInterface, UInterfacedService>();
 		});

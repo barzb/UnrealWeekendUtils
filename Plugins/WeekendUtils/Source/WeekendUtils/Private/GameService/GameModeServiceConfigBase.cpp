@@ -16,8 +16,11 @@ namespace Internal
 
 void UGameModeServiceConfigBase::RegisterForMapsWithGameMode(const TSubclassOf<AGameModeBase>& GameModeClass)
 {
+	if (!HasAnyFlags(RF_ClassDefaultObject))
+		return;
+
 	TSubclassOf<UGameModeServiceConfigBase>& RegisteredConfigClass = Internal::GConfigClassesByGameModes.FindOrAdd(GameModeClass);
-	if (RegisteredConfigClass != nullptr && RegisteredConfigClass != GameModeClass)
+	if (RegisteredConfigClass != nullptr && RegisteredConfigClass != GetClass())
 	{
 		// Only one AutoRegisteredGameServiceConfig per game mode is allowed:
 		ensureMsgf(false, TEXT("GameServiceConfig for GameMode %s already has another config class configured!"));

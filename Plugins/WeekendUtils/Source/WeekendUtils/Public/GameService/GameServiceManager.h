@@ -59,8 +59,9 @@ public:
 	/**
 	 * Registers a service class and its instance class, as long as it has not been configured already with a higher priority.
 	 * @remark Only allowed to be called before configured service has been started.
+	 * @returns whether the service was registered successfully.
 	 */
-	void RegisterServiceClass(const FGameServiceClass& ServiceClass, const FGameServiceInstanceClass& InstanceClass, int32 Priority = 0);
+	bool RegisterServiceClass(const FGameServiceClass& ServiceClass, const FGameServiceInstanceClass& InstanceClass, int32 Priority = 0);
 
 	/** Creates and starts all service instances that were previously registered, and all resulting service dependencies. */
 	void StartRegisteredServices(UWorld& TargetWorld);

@@ -30,6 +30,7 @@ WE_END_DEFINE_SPEC(GameServiceManager)
 		TestWorld = MakeShared<FScopedAutomationTestWorld>(SpecTestWorldName);
 		TestWorld->InitializeGame();
 		ServiceManager = UGameServiceManager::GetPtr();
+		ServiceManager->ClearServiceRegister(); // Clear registrations from auto configs.
 	});
 
 	AfterEach([this]
@@ -164,7 +165,7 @@ WE_END_DEFINE_SPEC(GameServiceManager)
 
 			// Instance Class != Service Class:
 			ServiceManager->StartService<IMockGameServiceInterface, UInterfacedService>(TestWorld->AsRef());
-			TestNotNull("IMockGameServiceInterface instance", ServiceManager->FindStartedServiceInstance<IMockGameServiceInterface>());
+			TestNotNull("IMockGameServiceInterface instance", ServiceManager->FindStartedServiceInstance<IMockGameServiceInterface, UInterfacedService>());
 			TestNull("UInterfacedService instance", ServiceManager->FindStartedServiceInstance<UInterfacedService>());
 		});
 

@@ -16,9 +16,6 @@
 
 #include "GameServiceConfig.generated.h"
 
-#define GAMESERVICE_PRIO_MAX UINT32_MAX
-#define GAMESERVICE_PRIO_DEFAULT 0
-
 /**
  * Configuration container for the @UGameServiceManager.
  */
@@ -30,41 +27,46 @@ class WEEKENDUTILS_API UGameServiceConfig : public UObject
 public:
 	/**
 	 * Creates a UGameServiceConfig instance for given world, automatically registering it with the @UGameServiceManager.
+	 * @note Be aware that some service users (like WorldSubsystems) could already have started services.
 	 * @param World The world used as outer for the new config instance.
-	 * @param Priority Services registered by this container will overwrite existing service configs when priority is higher.
 	 * @param ConfigExec External function to be called to configure the config instance before it is registered.
 	 * @returns the created and already registered service config.
 	 *
 	 * @example:
-	 * UGameServiceConfig::CreateForWorld(World, UINT32_MAX, [](UGameServiceConfig& Config)
+	 * UGameServiceConfig::CreateForWorld(World, [](UGameServiceConfig& Config)
 	 * {
+	 *    Config.SetPriority(7);
 	 *    Config.AddSingletonService<USomeService>();
 	 *    Config.AddSingletonService<IAnotherServiceInterface, UAnotherServiceImpl>();
 	 * });
 	 */
-	static UGameServiceConfig& CreateForWorld(UWorld& World, uint32 Priority, TFunction<void(UGameServiceConfig&)> ConfigExec);
+	static UGameServiceConfig& CreateForWorld(UWorld& World, TFunction<void(UGameServiceConfig&)> ConfigExec);
+
+	/**
+	 * Creates a UGameServiceConfig instance for the next world that will start, automatically registering it with the @UGameServiceManager.
+	 * @note This is mainly intended to be used in automation tests, before a test world is created.
+	 * @param ConfigExec External function to be called to configure the config instance before it is registered.
+	 * @returns the created and already registered service config.
+	 *
+	 * @example:
+	 * UGameServiceConfig::CreateForNextWorld([](UGameServiceConfig& Config)
+	 * {
+	 *    Config.SetPriority(7);
+	 *    Config.AddSingletonService<USomeService>();
+	 *    Config.AddSingletonService<IAnotherServiceInterface, UAnotherServiceImpl>();
+	 * });
+	 */
+	static UGameServiceConfig& CreateForNextWorld(TFunction<void(UGameServiceConfig&)> ConfigExec);
 
 	/** Automatically registers the config instance with the @UGameServiceManager. Already called when using @CreateForWorld(). */
 	void RegisterWithGameServiceManager() const;
-
-	/**
-	 * Configures a game service class to be registered. Template argument is used as register-type and instance-type.
-	 * @note Singleton services are only instanced once (per world) for the register-type.
-	 */
-	template<typename T>
-	void AddSingletonService()
-	{
-		static_assert(!TIsAbstract<T>::Value);
-		static_assert(TIsDerivedFrom<T, UGameServiceBase>::Value);
-		SingletonServices.Add(T::StaticClass(), T::StaticClass());
-	}
 
 	/**
 	 * Configures a game service class to be registered.
 	 * @note Singleton services are only instanced once (per world) for the register-type.
 	 * @note Services that are registered with the same InstanceClass will share the same instance.
 	 */
-	template<typename ServiceClass, class InstanceClass>
+	template<typename ServiceClass, class InstanceClass = ServiceClass>
 	void AddSingletonService()
 	{
 		static_assert(!TIsAbstract<InstanceClass>::Value);
@@ -73,6 +75,7 @@ public:
 		SingletonServices.Add(GameService::GetServiceUClass<ServiceClass>(), InstanceClass::StaticClass());
 	}
 
+	FORCEINLINE int32 GetNumConfiguredServices() const { return SingletonServices.Num(); }
 	FORCEINLINE const TMap<FGameServiceClass, FGameServiceInstanceClass>& GetConfiguredServices() const
 	{
 		return SingletonServices; //#todo-service-later consider supporting ScopedServices as well
@@ -84,7 +87,7 @@ public:
 
 protected:
 	UPROPERTY()
-	uint32 RegisterPriority = GAMESERVICE_PRIO_DEFAULT;
+	uint32 RegisterPriority = 0;
 
 	/** Key: FGameServiceClass | Value: FGameServiceInstanceClass */
 	UPROPERTY()

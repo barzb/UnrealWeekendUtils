@@ -11,13 +11,21 @@
 
 #include "GameService/GameServiceManager.h"
 #include "WeekendUtils.h"
+#include "Initialization/WorldGameServiceRunner.h"
 
-UGameServiceConfig& UGameServiceConfig::CreateForWorld(UWorld& World, uint32 Priority, TFunction<void(UGameServiceConfig&)> ConfigExec)
+UGameServiceConfig& UGameServiceConfig::CreateForWorld(UWorld& World, TFunction<void(UGameServiceConfig&)> ConfigExec)
 {
 	UGameServiceConfig* NewConfig = NewObject<UGameServiceConfig>(&World);
-	NewConfig->RegisterPriority = Priority;
 	ConfigExec(*NewConfig);
 	NewConfig->RegisterWithGameServiceManager();
+	return *NewConfig;
+}
+
+UGameServiceConfig& UGameServiceConfig::CreateForNextWorld(TFunction<void(UGameServiceConfig&)> ConfigExec)
+{
+	UGameServiceConfig* NewConfig = NewObject<UGameServiceConfig>(GetTransientPackage());
+	ConfigExec(*NewConfig);
+	UWorldGameServiceRunner::SetServiceConfigForNextWorld(*NewConfig);
 	return *NewConfig;
 }
 

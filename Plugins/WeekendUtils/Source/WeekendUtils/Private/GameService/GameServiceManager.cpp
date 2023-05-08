@@ -17,28 +17,32 @@
 
 void UGameServiceManager::RegisterServices(const UGameServiceConfig& Config)
 {
+	int32 NumRegistrations = 0;
 	for (const auto Itr : Config.GetConfiguredServices())
 	{
 		const FGameServiceClass& RegisterClass = Itr.Key;
 		const FGameServiceInstanceClass& InstanceClass = Itr.Value;
-		RegisterServiceClass(RegisterClass, InstanceClass, Config.GetPriority());
+		NumRegistrations += RegisterServiceClass(RegisterClass, InstanceClass, Config.GetPriority());
 	}
+
+	UE_LOG(LogGameService, Log, TEXT("Registered %d service classes from %s (Priority: %d)"),
+		NumRegistrations, *Config.GetClass()->GetName(), Config.GetPriority());
 }
 
-void UGameServiceManager::RegisterServiceClass(const FGameServiceClass& ServiceClass, const FGameServiceInstanceClass& InstanceClass, int32 Priority)
+bool UGameServiceManager::RegisterServiceClass(const FGameServiceClass& ServiceClass, const FGameServiceInstanceClass& InstanceClass, int32 Priority)
 {
 	if (!ensureMsgf(!WasServiceStarted(ServiceClass), TEXT("RegisterServiceClass is not allowed to be called after the service has already been started.")))
-		return;
+		return false;
 
 	FServiceClassRegistryEntry& RegisteredEntry = ServiceClassRegister.FindOrAdd(ServiceClass);
 	if (RegisteredEntry.InstanceClass == InstanceClass)
-		return; // Already registered.
+		return false; // Already registered.
 
 	if (RegisteredEntry.InstanceClass != nullptr)
 	{
 		// Class already registered with higher priority:
 		if (RegisteredEntry.RegisterPriority > Priority)
-			return;
+			return false;
 
 		// Priority is equal -> overwrite existing entry but log a warning:
 		UE_CLOG((RegisteredEntry.RegisterPriority == Priority), LogGameService, Warning,
@@ -46,15 +50,20 @@ void UGameServiceManager::RegisterServiceClass(const FGameServiceClass& ServiceC
 			*GetNameSafe(ServiceClass), *GetNameSafe(InstanceClass), Priority, *GetNameSafe(RegisteredEntry.InstanceClass));
 	}
 
+	UE_LOG(LogGameService, Verbose, TEXT("Already registered game service [%s | %s] will be overidden by higher priority registration -> [%s | %s]"),
+		*GetNameSafe(RegisteredEntry.RegisterClass), *GetNameSafe(RegisteredEntry.InstanceClass),
+		*GetNameSafe(ServiceClass), *GetNameSafe(InstanceClass));
+
 	RegisteredEntry.RegisterClass = ServiceClass;
 	RegisteredEntry.InstanceClass = InstanceClass;
 	RegisteredEntry.RegisterPriority = Priority;
+	return true;
 }
 
 void UGameServiceManager::StartRegisteredServices(UWorld& TargetWorld)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UGameServiceManager.StartRegisteredServices"), STAT_GameServiceManager_StartRegisteredServices, STATGROUP_GameService);
-	UE_LOG(LogGameService, Log, TEXT("Starting registered game services for world (%s)"), *TargetWorld.GetName());
+	UE_LOG(LogGameService, Log, TEXT(">>> Starting registered game services for world (%s):"), *TargetWorld.GetName());
 
 	TArray<FServiceClassRegistryEntry> RegisteredServices;
 	ServiceClassRegister.GenerateValueArray(OUT RegisteredServices);
@@ -62,6 +71,8 @@ void UGameServiceManager::StartRegisteredServices(UWorld& TargetWorld)
 	{
 		StartService(TargetWorld, ServiceEntry.RegisterClass, ServiceEntry.InstanceClass);
 	}
+
+	UE_LOG(LogGameService, Log, TEXT("<<< Finished starting registered game services for world (%s)"), *TargetWorld.GetName());
 }
 
 UGameServiceBase& UGameServiceManager::StartService(UWorld& TargetWorld, const FGameServiceClass& ServiceClass, UGameServiceBase& ServiceInstance)
@@ -79,7 +90,9 @@ UGameServiceBase& UGameServiceManager::StartService(UWorld& TargetWorld, const F
 	FServiceClassRegistryEntry& RegisteredEntry = ServiceClassRegister.FindOrAdd(ServiceClass);
 	if (RegisteredEntry.InstanceClass != nullptr)
 	{
-		ensure(ServiceInstance.GetClass() == RegisteredEntry.InstanceClass);
+		ensureMsgf(ServiceInstance.GetClass() == RegisteredEntry.InstanceClass,
+			TEXT("Starting a service (%s | %s) that was previously registered for a different instance class (%s)"),
+			*ServiceClass->GetName(), * ServiceInstance.GetClass()->GetName(), *RegisteredEntry.InstanceClass->GetName());
 	}
 
 	RegisteredEntry.RegisterClass = ServiceClass;
@@ -121,7 +134,7 @@ UGameServiceBase& UGameServiceManager::StartService(UWorld& TargetWorld, const F
 
 		if (bIsSameInstanceClass && bIsDifferentRegisterClass)
 		{
-			UE_LOG(LogGameService, Log, TEXT(">%3d | Redirect game service: [%s] %s"),
+			UE_LOG(LogGameService, Log, TEXT(">%3d | Alias game service: [%s] %s"),
 				StartOrderedServices.IndexOfByKey(StartedServiceClass), *ServiceClass->GetName(), *StartedServiceInstance->GetName());
 
 			StartedServices.Add(ServiceClass, StartedServiceInstance);
@@ -257,7 +270,7 @@ void UGameServiceManager::ShutdownAllServices()
 	}
 
 	// Service instances registered under multiple service classes have been shut down,
-	// but the redirected entries still remain in the list, so let's clear it:
+	// but the aliased entries still remain in the list, so let's clear it:
 	StartedServices.Empty();
 }
 
@@ -282,7 +295,7 @@ void UGameServiceManager::StartServiceDependencies(UWorld& TargetWorld, const UG
 		if (WasServiceStarted(ServiceDependency))
 			continue;
 
-		UE_LOG(LogGameService, Verbose, TEXT("Starting dependency for game service %s: [%s]"), *ServiceInstance.GetName(), *ServiceDependency->GetName());
+		UE_LOG(LogGameService, Verbose, TEXT("- Start dependency for game service [%s] -> [%s]"), *ServiceInstance.GetName(), *ServiceDependency->GetName());
 		const bool bCouldStartDependency = TryStartService(TargetWorld, ServiceDependency).IsSet();
 		checkf(bCouldStartDependency, TEXT("No appropriate service instance class found for %s"), *GetNameSafe(ServiceDependency));
 		// If the above check triggers, then we probably have a service that depends on another service that was never configured

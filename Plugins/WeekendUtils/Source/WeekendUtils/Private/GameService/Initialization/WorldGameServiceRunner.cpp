@@ -12,7 +12,13 @@
 #include "GameService/GameModeServiceConfigBase.h"
 #include "GameService/GameServiceBase.h"
 #include "GameService/GameServiceManager.h"
+#include "GameService/WorldServiceConfigBase.h"
 #include "WeekendUtils.h"
+
+namespace Internal
+{
+	static TStrongObjectPtr<UGameServiceConfig> GConfigInstanceForNextWorld = nullptr;
+}
 
 bool UWorldGameServiceRunner::DoesSupportWorldType(const EWorldType::Type WorldType) const
 {
@@ -39,7 +45,7 @@ void UWorldGameServiceRunner::Initialize(FSubsystemCollectionBase& Collection)
 
 	Super::Initialize(Collection);
 
-	RegisterAutoServiceConfig();
+	RegisterAutoServiceConfigs();
 
 	// Initialize all other WorldSubsystems that any configured service depends on first:
 	for (const TSubclassOf<UWorldSubsystem>& WorldSubsystemDependency : GatherWorldSubsystemDependencies())
@@ -47,11 +53,11 @@ void UWorldGameServiceRunner::Initialize(FSubsystemCollectionBase& Collection)
 		Collection.InitializeDependency(WorldSubsystemDependency);
 	}
 
-	StartRegisteredServices();
-
-	// 1. Gather GameServices that are registered as autonomous for this world
-	// 2. Wait for any Subsystem dependencies on the autonomous services and their service dependencies (and the dependencies of the subsystem dependencies)
-	// 3. Start all autonomous services and their service dependencies
+	// (i) Don't automatically start services in tests, they will be started on-demand.
+	if (!GIsAutomationTesting)
+	{
+		StartRegisteredServices();
+	}
 }
 
 void UWorldGameServiceRunner::Tick(float DeltaTime)
@@ -70,7 +76,6 @@ void UWorldGameServiceRunner::TickRunningServices(float DeltaTime)
 		if (!IsValid(RunningService) || !RunningService->IsTickable())
 			continue;
 
-		//#todo-service-later #todo-benni DECLARE_SCOPE_CYCLE_COUNTER for all services that tick
 		RunningService->TickService(DeltaTime);
 	}
 }
@@ -94,11 +99,34 @@ void UWorldGameServiceRunner::Deinitialize()
 	Super::Deinitialize();
 }
 
-void UWorldGameServiceRunner::RegisterAutoServiceConfig()
+void UWorldGameServiceRunner::SetServiceConfigForNextWorld(UGameServiceConfig& ServiceConfig)
 {
+	ensure(!Internal::GConfigInstanceForNextWorld.IsValid());
+	Internal::GConfigInstanceForNextWorld = TStrongObjectPtr(&ServiceConfig);
+	UE_LOG(LogGameService, Log, TEXT("Setting %s as GameServiceConfig for the next world to start."), *ServiceConfig.GetName());
+}
+
+void UWorldGameServiceRunner::RegisterAutoServiceConfigs()
+{
+	if (Internal::GConfigInstanceForNextWorld.IsValid())
+	{
+		UGameServiceManager::Get().RegisterServices(*Internal::GConfigInstanceForNextWorld);
+		Internal::GConfigInstanceForNextWorld.Reset();
+	}
+
+	// Configs by GameMode:
 	if (const UGameModeServiceConfigBase* AutoConfig = UGameModeServiceConfigBase::FindConfigForWorld(*GetWorld()))
 	{
-		UE_LOG(LogGameService, Log, TEXT("Matching GameServiceConfig (%s) found for configured game mode in current world (%s)."),
+		UE_LOG(LogGameService, Log, TEXT("Matching GameModeServiceConfig (%s) found for current world (%s)."),
+			*GetNameSafe(AutoConfig->GetClass()), *GetNameSafe(GetWorld()));
+
+		UGameServiceManager::Get().RegisterServices(*AutoConfig);
+	}
+
+	// Configs by World name:
+	if (const UWorldServiceConfigBase* AutoConfig = UWorldServiceConfigBase::FindConfigForWorld(*GetWorld()))
+	{
+		UE_LOG(LogGameService, Log, TEXT("Matching WorldServiceConfig (%s) found for current world (%s)."),
 			*GetNameSafe(AutoConfig->GetClass()), *GetNameSafe(GetWorld()));
 
 		UGameServiceManager::Get().RegisterServices(*AutoConfig);
@@ -115,11 +143,13 @@ TArray<TSubclassOf<UWorldSubsystem>> UWorldGameServiceRunner::GatherWorldSubsyst
 {
 	TArray<TSubclassOf<UWorldSubsystem>> Result;
 
-	const TArray<FGameServiceInstanceClass> ServiceInstanceClasses = UGameServiceManager::Get().GetAllRegisteredServiceInstanceClasses();
+	TArray<FGameServiceInstanceClass> ServiceInstanceClasses = UGameServiceManager::Get().GetAllRegisteredServiceInstanceClasses();
 	for (const FGameServiceInstanceClass& ServiceClass : ServiceInstanceClasses)
 	{
 		const auto GameServiceCDO = ServiceClass->GetDefaultObject<UGameServiceBase>();
-		for (const TSubclassOf<USubsystem>& SubsystemDependency : GameServiceCDO->GetSubsystemClassDependencies())
+		TArray<TSubclassOf<USubsystem>> AllSubsystemDependencies = GameServiceCDO->GetSubsystemClassDependencies();
+		AllSubsystemDependencies.Append(GameServiceCDO->GetOptionalSubsystemClassDependencies());
+		for (const TSubclassOf<USubsystem>& SubsystemDependency : AllSubsystemDependencies)
 		{
 			if (!SubsystemDependency->IsChildOf<UWorldSubsystem>())
 				continue;
