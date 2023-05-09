@@ -134,6 +134,7 @@ public:
 	TArray<FGameServiceClass> GetAllRegisteredServiceClasses() const;
 	TArray<FGameServiceInstanceClass> GetAllRegisteredServiceInstanceClasses() const;
 	TOptional<FGameServiceInstanceClass> FindRegisteredServiceInstanceClass(const FGameServiceClass& ServiceClass) const;
+	TArray<FGameServiceClass> GetAllStartedServiceClasses() const;
 	TArray<UGameServiceBase*> GetAllStartedServiceInstances() const;
 
 	/** @returns the service instance class that should be used for given service class, or TOptional<> if it could not be determined. */

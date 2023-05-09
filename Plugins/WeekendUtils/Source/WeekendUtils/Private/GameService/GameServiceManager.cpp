@@ -190,7 +190,7 @@ bool UGameServiceManager::IsServiceRunning(const FGameServiceClass& ServiceClass
 	if (!WasServiceStarted(ServiceClass))
 		return false;
 
-	const UAsyncGameServiceBase* AsyncService = Cast<UAsyncGameServiceBase>(FindStartedServiceInstance(ServiceClass));;
+	const UAsyncGameServiceBase* AsyncService = Cast<UAsyncGameServiceBase>(FindStartedServiceInstance(ServiceClass));
 	return (!IsValid(AsyncService) || AsyncService->IsServiceRunning());
 }
 
@@ -231,6 +231,11 @@ TOptional<FGameServiceInstanceClass> UGameServiceManager::FindRegisteredServiceI
 {
 	const FServiceClassRegistryEntry* Entry = ServiceClassRegister.Find(ServiceClass);
 	return (Entry ? Entry->InstanceClass : TOptional<FGameServiceInstanceClass>());
+}
+
+TArray<FGameServiceClass> UGameServiceManager::GetAllStartedServiceClasses() const
+{
+	return StartOrderedServices;
 }
 
 TOptional<FGameServiceInstanceClass> UGameServiceManager::DetermineServiceInstanceClass(const FGameServiceClass& ServiceClass) const

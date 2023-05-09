@@ -10,6 +10,7 @@
 #include "WeekendUtils.h"
 
 #if WITH_GAMEPLAY_DEBUGGER
+ #include "GameService/Debug/GameplayDebuggerCategory_GameServices.h"
  #include "GameplayDebugger.h"
  #include "GameplayDebugger/Extensions/GameplayDebuggerExtension_SelfDebugActor.h"
  #include "GameplayDebugger/GameplayDebuggerUtils.h"
@@ -26,11 +27,11 @@ void FWeekendUtilsModule::StartupModule()
 #if WITH_GAMEPLAY_DEBUGGER
 	if (IGameplayDebugger::IsAvailable())
 	{
-		IGameplayDebugger& GameplayDebugger = IGameplayDebugger::Get();
+		// Categories:
+		FGameplayDebugger::RegisterCategory<FGameplayDebuggerCategory_GameServices>();
 
 		// Extensions:
 		FGameplayDebugger::RegisterExtension<FGameplayDebuggerExtension_SelfDebugActor>();
-		GameplayDebugger.NotifyExtensionsChanged();
 	}
 #endif
 }
@@ -43,11 +44,11 @@ void FWeekendUtilsModule::ShutdownModule()
 #if WITH_GAMEPLAY_DEBUGGER
 	if (IGameplayDebugger::IsAvailable())
 	{
-		IGameplayDebugger& GameplayDebugger = IGameplayDebugger::Get();
+		// Categories:
+		FGameplayDebugger::UnregisterCategory<FGameplayDebuggerCategory_GameServices>();
 
-		// Extension:
+		// Extensions:
 		FGameplayDebugger::UnregisterExtension<FGameplayDebuggerExtension_SelfDebugActor>();
-		GameplayDebugger.NotifyExtensionsChanged();
 	}
 #endif
 }
