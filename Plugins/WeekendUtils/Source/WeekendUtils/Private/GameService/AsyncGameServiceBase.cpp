@@ -14,14 +14,48 @@ void UAsyncGameServiceBase::StartService()
 	ensure(CurrentStatus == EAsyncServiceStatus::Inactive);
 	CurrentStatus = EAsyncServiceStatus::Starting;
 
-	if (!bWaitForDependenciesBeforeStarting || AreAllDependenciesReady(this))
+	AttemptToStartService();
+}
+
+void UAsyncGameServiceBase::AttemptToStartService()
+{
+	bIsWaitingForDependencies = (bWaitForDependenciesBeforeStarting && !AreAllDependenciesReady(this));
+	bIsWaitingForWorldToBeginPlay = (bWaitForWorldToBeginPlay && !GetWorld()->HasBegunPlay());
+	const bool bIsReadyToStart = (!bIsWaitingForDependencies && !bIsWaitingForWorldToBeginPlay);
+
+	if (bIsReadyToStart)
 	{
+		if (WaitForWorldDelegateHandle.IsValid())
+		{
+			// Clear potential delegate binding when waiting for the world to begin play:
+			GetWorld()->OnWorldBeginPlay.Remove(WaitForWorldDelegateHandle);
+			WaitForWorldDelegateHandle.Reset();
+		}
+
 		BeginServiceStart();
+		return;
 	}
-	else
+
+	if (bIsWaitingForDependencies)
 	{
-		WaitForDependencies(this, FOnWaitingFinished::CreateUObject(this, &UAsyncGameServiceBase::BeginServiceStart));
+		WaitForDependencies(this, FOnWaitingFinished::CreateUObject(this, &UAsyncGameServiceBase::AttemptToStartService));
 	}
+
+	if (bIsWaitingForWorldToBeginPlay)
+	{
+		WaitForWorldToBeginPlay(*GetWorld());
+	}
+}
+
+void UAsyncGameServiceBase::WaitForWorldToBeginPlay(UWorld& World)
+{
+	if (World.HasBegunPlay())
+	{
+		AttemptToStartService();
+		return;
+	}
+
+	WaitForWorldDelegateHandle = World.OnWorldBeginPlay.AddUObject(this, &UAsyncGameServiceBase::AttemptToStartService);
 }
 
 void UAsyncGameServiceBase::ShutdownService()
@@ -36,6 +70,31 @@ void UAsyncGameServiceBase::ShutdownService()
 
 	CurrentStatus = EAsyncServiceStatus::Stopping;
 	BeginServiceShutdown(bIsWorldTearingDown);
+}
+
+TOptional<FString> UAsyncGameServiceBase::GetServiceStatusInfo() const
+{
+	switch (CurrentStatus)
+	{
+		case EAsyncServiceStatus::Inactive:
+			return FString("Inactive");
+
+		case EAsyncServiceStatus::Starting:
+		{
+			if (bIsWaitingForDependencies)
+				return FString("Starting.. (Waiting for dependencies)");
+			if (bIsWaitingForWorldToBeginPlay)
+				return FString("Starting.. (Waiting for world to begin play)");
+
+			return FString("Starting..");
+		}
+
+		case EAsyncServiceStatus::Stopping:
+			return FString("Stopping..");
+
+		case EAsyncServiceStatus::Running:
+		default: return {};
+	}
 }
 
 void UAsyncGameServiceBase::FinishServiceStart()

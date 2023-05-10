@@ -46,6 +46,9 @@ public:
 	 */
 	virtual void ShutdownService() {}
 
+	/** @returns optional information about the status of this service, mainly for debugging purposes. */
+	virtual TOptional<FString> GetServiceStatusInfo() const { return {}; }
+
 protected:
 	/**
 	 * Marks this class to be replicated from the server to clients.

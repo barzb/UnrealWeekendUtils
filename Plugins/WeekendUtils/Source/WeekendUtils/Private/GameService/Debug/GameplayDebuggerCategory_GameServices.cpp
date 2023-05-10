@@ -51,10 +51,11 @@ void FGameplayDebuggerCategory_GameServices::CollectData(APlayerController* Owne
 		return (IndexOfLhs == IndexOfRhs) ? (Lhs < Rhs) : (IndexOfLhs < IndexOfRhs);
 	});
 
-	TArray<FString> OfflineServicesInfo, StartedServicesInfo, RunningServicesInfo, AliasedServicesInfo;
+	TArray<FString> OfflineServicesInfo, StartedServicesInfo, AliasedServicesInfo;
 	for (const FGameServiceClass& ServiceClass : RegisteredServiceClasses)
 	{
 		const FGameServiceInstanceClass& InstanceClass = *GameServiceManager->FindRegisteredServiceInstanceClass(ServiceClass);
+		const UGameServiceBase* ServiceInstance = GameServiceManager->FindStartedServiceInstance(ServiceClass);
 
 		//////////////////////////////////////////////////////////
 		// Not yet started:
@@ -78,7 +79,9 @@ void FGameplayDebuggerCategory_GameServices::CollectData(APlayerController* Owne
 		const FString StartIndex = FString::Printf(TEXT("#%3d"), StartedServiceClasses.IndexOfByKey(ServiceClass));
 		if (!GameServiceManager->IsServiceRunning(ServiceClass))
 		{
-			StartedServicesInfo.Add(FString::Printf(TEXT("{orange}<Starting> {white}%s [{yellow}%s{white} | %s]"), *StartIndex, *GetNameSafe(ServiceClass), *GetNameSafe(InstanceClass)));
+			StartedServicesInfo.Add(FString::Printf(TEXT("{orange}<Starting> {white}%s [{yellow}%s{white} | %s] {yellow}%s"),
+				*StartIndex, *GetNameSafe(ServiceClass), *GetNameSafe(InstanceClass),
+				*(IsValid(ServiceInstance) ? ServiceInstance->GetServiceStatusInfo().Get(FString()) : FString())));
 			StartedServicesInfo += CollectServiceDependenciesInfo(ServiceClass);
 		}
 
@@ -86,8 +89,10 @@ void FGameplayDebuggerCategory_GameServices::CollectData(APlayerController* Owne
 		// Started and running:
 		else
 		{
-			RunningServicesInfo.Add(FString::Printf(TEXT("{green}<Running> {white}%s [{yellow}%s{white} | %s]"), *StartIndex, *GetNameSafe(ServiceClass), *GetNameSafe(InstanceClass)));
-			RunningServicesInfo += CollectServiceDependenciesInfo(ServiceClass);
+			StartedServicesInfo.Add(FString::Printf(TEXT("{green}<Running> {white}%s [{yellow}%s{white} | %s] {yellow}%s"),
+				*StartIndex, *GetNameSafe(ServiceClass), *GetNameSafe(InstanceClass),
+				*(IsValid(ServiceInstance) ? ServiceInstance->GetServiceStatusInfo().Get(FString()) : FString())));
+			StartedServicesInfo += CollectServiceDependenciesInfo(ServiceClass);
 		}
 	}
 
@@ -108,7 +113,6 @@ void FGameplayDebuggerCategory_GameServices::CollectData(APlayerController* Owne
 		AddTextLine("{white}------------------------------------");
 		Algo::ForEach(OfflineServicesInfo, [this](const FString& Line) { AddTextLine(Line); });
 		Algo::ForEach(StartedServicesInfo, [this](const FString& Line) { AddTextLine(Line); });
-		Algo::ForEach(RunningServicesInfo, [this](const FString& Line) { AddTextLine(Line); });
 	}
 	if (AliasedServicesInfo.Num() > 0)
 	{
