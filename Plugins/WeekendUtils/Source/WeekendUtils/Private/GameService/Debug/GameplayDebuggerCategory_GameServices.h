@@ -28,7 +28,7 @@ public:
 
 private:
 	void ToggleShowDependencies();
-	bool ShouldShowDependencies() const;
+	static bool ShouldShowDependencies();
 
 	TArray<FString> CollectServiceDependenciesInfo(const FGameServiceClass& ServiceClass) const;
 
