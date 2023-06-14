@@ -30,6 +30,8 @@ public class WeekendUtils : ModuleRules
 			new string[]
 			{
 				"Core",
+				"Slate",
+				"SlateCore",
 				"StructUtils",
 				// ... add other public dependencies that you statically link with here ...
 			}

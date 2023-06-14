@@ -73,6 +73,8 @@ public:
 		static_assert(TIsDerivedFrom<InstanceClass, ServiceClass>::Value);
 		static_assert(TIsDerivedFrom<InstanceClass, UGameServiceBase>::Value);
 		SingletonServices.Add(GameService::GetServiceUClass<ServiceClass>(), InstanceClass::StaticClass());
+
+		//#todo-service-later return some sort of struct ref to the service config entry where additional dependencies can be configured
 	}
 
 	FORCEINLINE int32 GetNumConfiguredServices() const { return SingletonServices.Num(); }
