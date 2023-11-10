@@ -46,7 +46,7 @@ namespace Cheats::EVariableStyle
 	template <typename T>
 	static Type FromType()
 	{
-		if (TIsSame<T, bool>::Value)
+		if (std::is_same_v<T, bool>)
 			return TrueFalse;
 		if (TIsIntegral<T>::Value)
 			return Number;

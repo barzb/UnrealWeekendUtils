@@ -28,7 +28,7 @@ namespace WeekendUtils
 
 		// Create and initialize game instance
 		GameInstance = NewObject<UGameInstance>(GEngine);
-		GameInstance->InitializeStandalone(*NewWorldName); // -> indiretly calls GameInstance->Init();
+		GameInstance->InitializeStandalone(*NewWorldName); // -> indirectly calls GameInstance->Init();
 
 		World = GameInstance->GetWorld();
 		World->GetWorldSettings()->DefaultGameMode = AGameModeBase::StaticClass();
@@ -47,6 +47,11 @@ namespace WeekendUtils
 				ActorItr->RouteEndPlay(EEndPlayReason::Quit);
 			}
 
+			if (IsValid(Viewport))
+			{
+				Viewport->DetachViewportClient();
+			}
+
 			if (World->GetGameInstance() != nullptr)
 			{
 				World->GetGameInstance()->Shutdown();
@@ -61,6 +66,7 @@ namespace WeekendUtils
 		GameMode = nullptr;
 		LocalPlayer = nullptr;
 		PlayerController = nullptr;
+		Viewport = nullptr;
 	}
 
 	void FScopedAutomationTestWorld::InitializeGame() { InitializeGame(FConfig()); }
@@ -74,7 +80,11 @@ namespace WeekendUtils
 			return;
 
 		GameMode = World->GetAuthGameMode();
-		GameMode->PlayerStateClass = (Config.PlayerStateClass ? Config.PlayerStateClass : APlayerState::StaticClass());
+		GameMode->PlayerStateClass = (Config.PlayerStateClass ? Config.PlayerStateClass : TSubclassOf<APlayerState>(APlayerState::StaticClass()));
+
+		Viewport = NewObject<UGameViewportClient>(GEngine);
+		GameInstance->GetWorldContext()->GameViewport = Viewport;
+		Viewport->Init(*GameInstance->GetWorldContext(), GameInstance);
 
 		FString ErrorString;
 		LocalPlayer = World->GetGameInstance()->CreateLocalPlayer(0, OUT ErrorString, false);
@@ -92,4 +102,4 @@ namespace WeekendUtils
 	}
 }
 
-#endif WITH_AUTOMATION_WORKER
+#endif

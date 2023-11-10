@@ -37,11 +37,11 @@
 ///////////////////////////////////////////////////////////////////////////////////////
 
 #define DEFINE_CHEAT_COLLECTION(CollectionName, ...)                                  \
-	namespace Cheats::##CollectionName                                                \
+	namespace Cheats::CollectionName                                                  \
 	{                                                                                 \
 		FCheatCommandCollection Collection = FCheatCommandCollection(__VA_ARGS__);    \
 	}                                                                                 \
-	namespace Cheats::##CollectionName
+	namespace Cheats::CollectionName
 
 #define DEFINE_CHEAT_COMMAND(CheatName, CommandName)                                  \
 			class F##CheatName##Command final : public ICheatCommand                  \
@@ -71,6 +71,8 @@ public:
 		FString Name = "";
 		FString Description = "";
 		EArgumentStyle Style = EArgumentStyle::Text;
+		FString ToShortString() const;
+		FString ToString() const;
 	};
 
 	/** Event fired after the cheat command printed a log message. */
@@ -97,14 +99,14 @@ protected:
 	struct FDescriber
 	{
 		/** Set the display name of the cheat command. @example: DisplayAs("Increase Score") */
-		FDescriber& DisplayAs(FString DisplayName);
+		FDescriber& DisplayAs(FString InDisplayName);
 
 		/** Describe the function of the cheat command. @example: DescribeCheat("Increases the player score by an amount.") */
-		FDescriber& DescribeCheat(FString Description);
+		FDescriber& DescribeCheat(FString InDescription);
 
 		/** Describe an argument of the cheat command. @example: DescribeArgument<int32>("Amount", "How much score to add. Default: 100") */
 		template <typename ArgumentType>
-		FDescriber& DescribeArgument(FString ArgumentName, FString Description);
+		FDescriber& DescribeArgument(FString InArgumentName, FString InDescription = "");
 
 		TOptional<FString> NameForDisplay = {};
 		TOptional<FString> FunctionDescription = {};
@@ -133,8 +135,23 @@ protected:
 	/** Sends a log message with verbosity 'VeryVerbose' to the logfile, console and any listeners (like the CheatMenu). */
 	void LogVeryVerbose(const FString& Message) const;
 
+	/** @returns whether the passed object is invalid (=true) or valid (=false) with the possibility to log an error in case of invalidity. */
+	bool LogInvalidity(const UObject* Object, FString ErrorMessage) const;
+
 	FORCEINLINE UWorld* GetWorld() const { return World; }
 	FORCEINLINE FString GetNextStringArgument() const { return Args.IsValidIndex(NextArgsIndex) ? Args[NextArgsIndex++] : ""; }
+
+	/** @returns the local player controller (or nullptr) in the cheat execution world. */
+	template <typename T> T* GetLocalPlayerController() const { return Cast<T>(GetLocalPlayerController()); }
+	APlayerController* GetLocalPlayerController() const;
+
+	/** @returns the local player state (or nullptr) in the cheat execution world. */
+	template <typename T> T* GetLocalPlayerState() const { return Cast<T>(GetLocalPlayerState()); }
+	APlayerState* GetLocalPlayerState() const;
+
+	/** @returns the local player pawn (or nullptr) in the cheat execution world. */
+	template <typename T> T* GetLocalPlayerPawn() const { return Cast<T>(GetLocalPlayerPawn()); }
+	APawn* GetLocalPlayerPawn() const;
 
 	/** @returns the next argument in the argument list - or given fallback value if the argument does not exist. */
 	template <typename ArgumentType = FString, typename = typename TEnableIf<TIsConstructible<FString, ArgumentType>::Value>::Type, typename T2 = void>
@@ -166,6 +183,11 @@ protected:
 	template <typename ArgumentType, typename Parser>
 	TOptional<ArgumentType> GetNextArgumentOrError(FString Error, Parser CustomParser) const;
 
+	/** Executes another cheat command with the same arguments and world as this cheat was executed with. */
+	void ExecuteOtherCheat(ICheatCommand& OtherCheatCommand);
+
+	/** @returns a statically allocated UObject that is shared between all cheats, but only exists inside of the current world. */
+	UObject* GetOrCreateSharedContextObjectForWorld();
 
 private:
 	TObjectPtr<UWorld> World = nullptr;
@@ -190,15 +212,19 @@ template <typename ArgumentType, typename, typename T>
 ArgumentType ICheatCommand::GetNextArgumentOr(ArgumentType Fallback) const
 {
 	// (i) T == FString.
-	return Args.IsValidIndex(NextArgsIndex) ? Args[NextArgsIndex++] : Fallback;
+	const int32 ArgsIdx = NextArgsIndex++;
+	return (Args.IsValidIndex(ArgsIdx) && !Args[ArgsIdx].IsEmpty()) ? Args[ArgsIdx] : Fallback;
 }
 
 template <typename ArgumentType, typename>
 ArgumentType ICheatCommand::GetNextArgumentOr(ArgumentType Fallback) const
 {
-	// (i) T must have a global LexFromString() override.
-	ArgumentType TypedArg = Fallback;
-	LexFromString(OUT TypedArg, *GetNextStringArgument());
+	// (i) T must have a global LexTryParseString() override.
+	ArgumentType TypedArg;
+	if (!LexTryParseString(OUT TypedArg, *GetNextStringArgument()))
+	{
+		TypedArg = Fallback;
+	}
 	return TypedArg;
 }
 
@@ -211,20 +237,23 @@ ArgumentType ICheatCommand::GetNextArgumentOr(ArgumentType Fallback, Parser Cust
 template <typename ArgumentType, typename, typename T>
 TOptional<ArgumentType> ICheatCommand::GetNextArgumentOrError(FString CustomError) const
 {
-	if (!Args.IsValidIndex(NextArgsIndex))
+	// (i) T == FString.
+	const int32 ArgsIdx = NextArgsIndex++;
+	if (!Args.IsValidIndex(ArgsIdx) || Args[ArgsIdx].IsEmpty())
 	{
 		const FString Error = CustomError.IsEmpty() ? GetDefaultMissingArgumentError() : CustomError;
 		LogError(FString::Printf(TEXT("Missing argument: %s"), *Error));
 		return {};
 	}
-	return Args[NextArgsIndex++];
+	return Args[ArgsIdx];
 }
 
 template <typename ArgumentType, typename>
 TOptional<ArgumentType> ICheatCommand::GetNextArgumentOrError(FString CustomError) const
 {
+	// (i) T must have a global LexTryParseString() override.
 	ArgumentType TypedArg;
-	if (!TryLexFromString(OUT TypedArg, *GetNextStringArgument()))
+	if (!LexTryParseString(OUT TypedArg, *GetNextStringArgument()))
 	{
 		const FString Error = CustomError.IsEmpty() ? GetDefaultMissingArgumentError() : CustomError;
 		LogError(FString::Printf(TEXT("Missing or wrong argument: %s"), *Error));
@@ -248,24 +277,24 @@ TOptional<ArgumentType> ICheatCommand::GetNextArgumentOrError(FString Error, Par
 ///////////////////////////////////////////////////////////////////////////////////////
 /// Inlines for ICheatCommand::FDescriber:
 
-inline ICheatCommand::FDescriber& ICheatCommand::FDescriber::DisplayAs(FString DisplayName)
+inline ICheatCommand::FDescriber& ICheatCommand::FDescriber::DisplayAs(FString InDisplayName)
 {
-	NameForDisplay = DisplayName;
+	NameForDisplay = InDisplayName;
 	return *this;
 }
 
-inline ICheatCommand::FDescriber& ICheatCommand::FDescriber::DescribeCheat(FString Description)
+inline ICheatCommand::FDescriber& ICheatCommand::FDescriber::DescribeCheat(FString InDescription)
 {
-	FunctionDescription = Description;
+	FunctionDescription = InDescription;
 	return *this;
 }
 
 template <typename ArgumentType>
-ICheatCommand::FDescriber& ICheatCommand::FDescriber::DescribeArgument(FString ArgumentName, FString Description)
+ICheatCommand::FDescriber& ICheatCommand::FDescriber::DescribeArgument(FString InArgumentName, FString InDescription)
 {
 	FArgumentInfo& ArgumentInfo = ArgumentDescriptions.AddDefaulted_GetRef();
-	ArgumentInfo.Name = ArgumentName;
-	ArgumentInfo.Description = Description;
+	ArgumentInfo.Name = InArgumentName;
+	ArgumentInfo.Description = InDescription;
 	ArgumentInfo.Style = Cheats::EVariableStyle::FromType<ArgumentType>();
 	return *this;
 }

@@ -4,7 +4,7 @@
 	"VersionName": "1.0",
 	"FriendlyName": "WeekendUtils",
 	"Description": "Shared utilities and stuff.",
-	"Category": "Other",
+	"Category": "Utility",
 	"CreatedBy": "Benjamin Barz",
 	"CreatedByURL": "https://github.com/barzb/UnrealWeekendUtils",
 	"DocsURL": "https://github.com/barzb/UnrealWeekendUtils",
@@ -30,6 +30,10 @@
 	"Plugins": [
 		{
 			"Name": "StructUtils",
+			"Enabled": true
+		},
+		{
+			"Name": "GameFeatures",
 			"Enabled": true
 		}
 	]

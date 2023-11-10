@@ -103,6 +103,7 @@ void SCheatMenu::Construct(const FArguments& InArgs)
 {
 	CurrentTabName = DEFAULT_TAB_NAME;
 	NumRecentlyUsedCheatsToShow = InArgs._NumRecentlyUsedCheatsToShow;
+	OnCheatExecuted = InArgs._OnCheatExecuted;
 
 	TSharedRef<SHorizontalBox> MainContent = SNew(SHorizontalBox);
 
@@ -258,7 +259,7 @@ SCheatMenu::FEntry::FEntry(ICheatCommand* InCheatCommand, const FCheatMenuCatego
 
 SCheatMenu::~SCheatMenu()
 {
-	for (const TSharedPtr<FEntry> Entry : Entries)
+	for (const TSharedPtr<FEntry>& Entry : Entries)
 	{
 		Entry->CheatCommand->OnLogMessage.RemoveAll(this);
 		Entry->CheatCommand->OnAfterExecuted.RemoveAll(this);
@@ -281,10 +282,10 @@ const FString& SCheatMenu::FEntry::GetCommandName() const
 	return CheatCommand->GetCommandName();
 }
 
-bool SCheatMenu::FEntry::MatchesFilterText(const FString& FilterText) const
+bool SCheatMenu::FEntry::MatchesFilterText(const FString& TextToFilter) const
 {
-	return CheatCommand->GetCommandName().Contains(FilterText)
-		|| CheatCommand->GetDisplayName().Contains(FilterText);
+	return CheatCommand->GetCommandName().Contains(TextToFilter)
+		|| CheatCommand->GetDisplayName().Contains(TextToFilter);
 }
 
 void SCheatMenu::FEntry::ExecuteCheatCommand()
@@ -313,7 +314,7 @@ void SCheatMenu::FEntry::ExecuteCheatCommand()
 void SCheatMenu::CollectCheats()
 {
 	// Clear previous:
-	for (const TSharedPtr<FEntry> Entry : Entries)
+	for (const TSharedPtr<FEntry>& Entry : Entries)
 	{
 		Entry->CheatCommand->OnLogMessage.RemoveAll(this);
 		Entry->CheatCommand->OnAfterExecuted.RemoveAll(this);
@@ -322,7 +323,7 @@ void SCheatMenu::CollectCheats()
 	SectionNamesInTabNames.Empty();
 
 	// Collect anew:
-	for (const FCheatCommandCollection* Collection : FCheatCommandCollection::AllCollections)
+	for (const Cheats::FCheatCommandCollection* Collection : Cheats::FCheatCommandCollection::AllCollections)
 	{
 		if (!Collection->ShowInCheatMenu())
 			continue;
@@ -633,7 +634,7 @@ TSharedRef<SWidget> SCheatMenu::ConstructCheatCommandItems(const TArray<TSharedP
 
 				// Argument Name:
 				+ SHorizontalBox::Slot()
-				.FillWidth(2.f)
+				.FillWidth(3.f)
 				.HAlign(HAlign_Right)
 				.VAlign(VAlign_Center)
 				[
@@ -645,7 +646,7 @@ TSharedRef<SWidget> SCheatMenu::ConstructCheatCommandItems(const TArray<TSharedP
 
 				// Argument Input:
 				+ SHorizontalBox::Slot()
-				.FillWidth(1.f)
+				.FillWidth(2.f)
 				.MaxWidth(bIsText ? 256.f : 64.f)
 				.HAlign(bIsText ? HAlign_Fill : HAlign_Left)
 				.VAlign(VAlign_Center)
@@ -701,7 +702,7 @@ TSharedRef<SWidget> SCheatMenu::ConstructArgumentInput(const ICheatCommand::FArg
 		{
 			const FString DefaultValue = *InOutValue;
 			return SNew(SEditableTextBox)
-			.MinDesiredWidth(MinDesiredWith)
+			.MinDesiredWidth(MinDesiredWith * 2.f)
 			.ToolTipText(FText::FromString(ArgumentInfo.Description))
 			.Text(FText::FromString(DefaultValue))
 			.OnTextCommitted_Lambda([InOutValue](const FText& Text, ETextCommit::Type) { *InOutValue = Text.ToString(); });
@@ -756,9 +757,10 @@ void SCheatMenu::HandleCheatLogMessage(const ICheatCommand& Command, ELogVerbosi
 	ErrorText->SetColorAndOpacity(Color);
 }
 
-void SCheatMenu::HandleCheatExecuted(const ICheatCommand& CheatCommand, UWorld*, TArray<FString>)
+void SCheatMenu::HandleCheatExecuted(const ICheatCommand& CheatCommand, UWorld* World, TArray<FString> Args)
 {
 	InsertCheatIntoRecentlyUsedList(CheatCommand.GetCommandName());
+	OnCheatExecuted.ExecuteIfBound(CheatCommand, World, Args);
 }
 
 void SCheatMenu::InsertCheatIntoRecentlyUsedList(const FString& CheatName)

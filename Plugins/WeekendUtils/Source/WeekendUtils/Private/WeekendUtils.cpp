@@ -9,9 +9,11 @@
 
 #include "WeekendUtils.h"
 
+
 #if WITH_GAMEPLAY_DEBUGGER
  #include "GameService/Debug/GameplayDebuggerCategory_GameServices.h"
  #include "GameplayDebugger.h"
+ #include "GameplayDebugger/Categories/GameplayDebuggerCategory_GameFeatures.h"
  #include "GameplayDebugger/Extensions/GameplayDebuggerExtension_SelfDebugActor.h"
  #include "GameplayDebugger/GameplayDebuggerUtils.h"
 #endif
@@ -29,6 +31,7 @@ void FWeekendUtilsModule::StartupModule()
 	{
 		// Categories:
 		FGameplayDebugger::RegisterCategory<FGameplayDebuggerCategory_GameServices>();
+		FGameplayDebugger::RegisterCategory<FGameplayDebuggerCategory_GameFeatures>();
 
 		// Extensions:
 		FGameplayDebugger::RegisterExtension<FGameplayDebuggerExtension_SelfDebugActor>();
@@ -46,6 +49,7 @@ void FWeekendUtilsModule::ShutdownModule()
 	{
 		// Categories:
 		FGameplayDebugger::UnregisterCategory<FGameplayDebuggerCategory_GameServices>();
+		FGameplayDebugger::UnregisterCategory<FGameplayDebuggerCategory_GameFeatures>();
 
 		// Extensions:
 		FGameplayDebugger::UnregisterExtension<FGameplayDebuggerExtension_SelfDebugActor>();

@@ -33,6 +33,7 @@ public class WeekendUtils : ModuleRules
 				"Slate",
 				"SlateCore",
 				"StructUtils",
+				"UMG"
 				// ... add other public dependencies that you statically link with here ...
 			}
 		);
@@ -42,7 +43,9 @@ public class WeekendUtils : ModuleRules
 			{
 				"CoreUObject",
 				"Engine",
+				"GameFeatures",
 				"InputCore",
+				"Projects",
 				// ... add private dependencies that you statically link with here ...
 			}
 		);

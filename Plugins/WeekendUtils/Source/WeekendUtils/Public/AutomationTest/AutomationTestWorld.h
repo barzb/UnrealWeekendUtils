@@ -58,6 +58,7 @@ namespace WeekendUtils
 		TObjectPtr<AGameModeBase> GameMode = nullptr;
 		TObjectPtr<ULocalPlayer> LocalPlayer = nullptr;
 		TObjectPtr<APlayerController> PlayerController = nullptr;
+		TObjectPtr<UGameViewportClient> Viewport = nullptr;
 	};
 }
 

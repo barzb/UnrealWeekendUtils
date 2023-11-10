@@ -9,6 +9,10 @@
 
 #include "Cheat/CheatCommand.h"
 
+#include "GameFramework/Pawn.h"
+#include "GameFramework/PlayerController.h"
+#include "GameFramework/PlayerState.h"
+
 DEFINE_LOG_CATEGORY(LogCheatCmd);
 
 ICheatCommand::ICheatCommand(const FString& InCommandName, const FDescriber& InDescriber) :
@@ -23,12 +27,23 @@ ICheatCommand::ICheatCommand(const FString& InCommandName, const FDescriber& InD
 
 void ICheatCommand::Execute(const TArray<FString>& InArgs, UWorld* InWorld)
 {
+	if (LogInvalidity(InWorld, "Cannot execute with invalid world!"))
+		return;
+
 	// Set temporary members for internal Execute() call of child class:
 	World = InWorld;
 	Args = InArgs;
 	NextArgsIndex = 0;
 
-	LogInfo(FString::Printf(TEXT("Execute with Args: %s"), *FString::Join(InArgs, TEXT(", "))));
+	if (InArgs.IsEmpty())
+	{
+		LogInfo(FString::Printf(TEXT("Execute")));
+	}
+	else
+	{
+		LogInfo(FString::Printf(TEXT("Execute with Args: %s"), *FString::Join(InArgs, TEXT(", "))));
+	}
+
 	Execute();
 	OnAfterExecuted.Broadcast(*this, InWorld, InArgs);
 
@@ -38,16 +53,25 @@ void ICheatCommand::Execute(const TArray<FString>& InArgs, UWorld* InWorld)
 	NextArgsIndex = 0;
 }
 
+FString ICheatCommand::FArgumentInfo::ToShortString() const
+{
+	return FString::Printf(TEXT("[%s]: %s"), *Name, *LexToString(Style));
+}
+
+FString ICheatCommand::FArgumentInfo::ToString() const
+{
+	if (Description.IsEmpty())
+		return ToShortString();
+	return FString::Printf(TEXT("[%s]: %s - %s"), *Name, *LexToString(Style), *Description);
+}
+
 FString ICheatCommand::GetFullDescription() const
 {
 	if (ArgumentsInfo.IsEmpty())
 		return CommandInfo;
 
 	// => "FunctionDescription | [Number] IntArgument1: IntArgument1Description | [True/False] BoolArgument2: BoolArgument2Description"
-	return CommandInfo + " | " + FString::JoinBy(ArgumentsInfo, TEXT(" | "), [](const FArgumentInfo& Argument)
-	{
-		return FString::Printf(TEXT("[%s] %s: %s"), *LexToString(Argument.Style), *Argument.Name, *Argument.Description);
-	});
+	return CommandInfo + " | " + FString::JoinBy(ArgumentsInfo, TEXT(" | "), &FArgumentInfo::ToString);
 }
 
 void ICheatCommand::LogInfo(const FString& Message) const
@@ -78,6 +102,59 @@ void ICheatCommand::LogVeryVerbose(const FString& Message) const
 {
 	UE_LOG(LogCheatCmd, VeryVerbose, TEXT("[%s] %s"), *CommandName, *Message);
 	OnLogMessage.Broadcast(*this, ELogVerbosity::VeryVerbose, Message);
+}
+
+APlayerController* ICheatCommand::GetLocalPlayerController() const
+{
+	return GetWorld()->GetFirstPlayerController();
+}
+
+APlayerState* ICheatCommand::GetLocalPlayerState() const
+{
+	const APlayerController* LocalPlayerController = GetLocalPlayerController();
+	return IsValid(LocalPlayerController) ? LocalPlayerController->GetPlayerState<APlayerState>() : nullptr;
+}
+
+APawn* ICheatCommand::GetLocalPlayerPawn() const
+{
+	const APlayerController* LocalPlayerController = GetLocalPlayerController();
+	return IsValid(LocalPlayerController) ? LocalPlayerController->GetPawn() : nullptr;
+}
+
+bool ICheatCommand::LogInvalidity(const UObject* Object, FString ErrorMessage) const
+{
+	if (!IsValid(Object))
+	{
+		LogError(ErrorMessage);
+		return true;
+	}
+	return false;
+}
+
+void ICheatCommand::ExecuteOtherCheat(ICheatCommand& OtherCheatCommand)
+{
+	OtherCheatCommand.Execute(Args, World);
+}
+
+UObject* ICheatCommand::GetOrCreateSharedContextObjectForWorld()
+{
+	static AActor* ContextObject = nullptr;
+	if (!IsValid(ContextObject) || ContextObject->GetWorld() != GetWorld())
+	{
+		if (IsValid(ContextObject))
+		{
+			ContextObject->Destroy();
+		}
+		FActorSpawnParameters Params;
+		Params.Name = FName("CheatCommand_Context");
+		Params.ObjectFlags = RF_Standalone|RF_Transient;
+#if WITH_EDITOR
+		Params.bHideFromSceneOutliner = true;
+#endif
+
+		ContextObject = GetWorld()->SpawnActor<AActor>(Params);
+	}
+	return ContextObject;
 }
 
 FString ICheatCommand::GetDefaultMissingArgumentError() const

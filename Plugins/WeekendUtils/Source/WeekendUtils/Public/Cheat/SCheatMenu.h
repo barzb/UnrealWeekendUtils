@@ -15,11 +15,14 @@
 #include "Widgets/Layout/SWrapBox.h"
 #include "Widgets/SCompoundWidget.h"
 
+DECLARE_DELEGATE_ThreeParams(FOnCheatExecuted, const ICheatCommand&, UWorld*, TArray<FString>);
+
 class WEEKENDUTILS_API SCheatMenu : public SCompoundWidget
 {
 public:
 	SLATE_BEGIN_ARGS(SCheatMenu) {}
 		SLATE_ARGUMENT_DEFAULT(uint16, NumRecentlyUsedCheatsToShow) = 16;
+		SLATE_EVENT(FOnCheatExecuted, OnCheatExecuted)
 	SLATE_END_ARGS()
 
 	virtual ~SCheatMenu() override;
@@ -41,7 +44,7 @@ protected:
 
 		TArray<FString> GetArgs() const;
 		const FString& GetCommandName() const;
-		bool MatchesFilterText(const FString& FilterText) const;
+		bool MatchesFilterText(const FString& TextToFilter) const;
 		void ExecuteCheatCommand();
 	};
 
@@ -58,6 +61,8 @@ protected:
 	TSharedPtr<SVerticalBox> TabList = nullptr;
 	TSharedPtr<SWrapBox> SectionList = nullptr;
 	TSharedPtr<STextBlock> ErrorText = nullptr;
+
+	FOnCheatExecuted OnCheatExecuted;
 
 	void CollectCheats();
 	void PopulateTabList();

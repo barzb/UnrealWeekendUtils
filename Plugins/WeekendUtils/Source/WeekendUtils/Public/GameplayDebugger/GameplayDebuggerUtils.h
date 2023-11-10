@@ -24,12 +24,6 @@
 namespace FGameplayDebugger
 {
 	template<typename T, typename TEnableIf<TIsDerivedFrom<T, FGameplayDebuggerExtension>::IsDerived, bool>::Type = true>
-	static TSharedRef<FGameplayDebuggerExtension> MakeInstance()
-	{
-		return MakeShareable(new T());
-	}
-
-	template<typename T, typename TEnableIf<TIsDerivedFrom<T, FGameplayDebuggerExtension>::IsDerived, bool>::Type = true>
 	void RegisterExtension()
 	{
 		IGameplayDebugger::Get().RegisterExtension(T::GetExtensionName(), IGameplayDebugger::FOnGetExtension::CreateStatic(&T::MakeInstance));
@@ -38,7 +32,8 @@ namespace FGameplayDebugger
 	template<typename T, typename TEnableIf<TIsDerivedFrom<T, FGameplayDebuggerExtension>::IsDerived, bool>::Type = true>
 	void RegisterExtension(FName ExtensionName)
 	{
-		IGameplayDebugger::Get().RegisterExtension(ExtensionName, IGameplayDebugger::FOnGetExtension::CreateStatic(&MakeInstance<T>));
+		IGameplayDebugger::Get().RegisterExtension(ExtensionName, 
+			IGameplayDebugger::FOnGetExtension::CreateLambda([]{ return MakeShareable(new T()); }));
 	}
 
 	template<typename T, typename TEnableIf<TIsDerivedFrom<T, FGameplayDebuggerExtension>::IsDerived, bool>::Type = true>
@@ -69,10 +64,11 @@ namespace FGameplayDebugger
 		IGameplayDebugger::Get().RegisterCategory(T::GetCategoryName(), IGameplayDebugger::FOnGetCategory::CreateStatic(&T::MakeInstance), DefaultState);
 	}
 
-	template<typename T, typename TEnableIf<TIsDerivedFrom<T, FGameplayDebuggerExtension>::IsDerived, bool>::Type = true>
+	template<typename T, typename TEnableIf<TIsDerivedFrom<T, FGameplayDebuggerCategory>::IsDerived, bool>::Type = true>
 	void RegisterCategory(FName CategoryName, EGameplayDebuggerCategoryState DefaultState = EGameplayDebuggerCategoryState::Disabled)
 	{
-		IGameplayDebugger::Get().RegisterCategory(CategoryName, IGameplayDebugger::FOnGetCategory::CreateStatic(&MakeInstance<T>), DefaultState);
+		IGameplayDebugger::Get().RegisterCategory(CategoryName,
+			IGameplayDebugger::FOnGetCategory::CreateLambda([]{ return MakeShareable(new T()); }), DefaultState);
 	}
 
 	template<typename T, typename TEnableIf<TIsDerivedFrom<T, FGameplayDebuggerCategory>::IsDerived, bool>::Type = true>
