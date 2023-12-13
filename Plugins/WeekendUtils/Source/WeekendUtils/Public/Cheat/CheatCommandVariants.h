@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2023 by Benjamin Barz in cooperation with Nine Worlds Studios GmbH.
+/// Copyright (C) 2023 by Benjamin Barz in cooperation with Aesir Interactive GmbH.
 ///
 /// This file is part of the WeekendUtils UE5 Plugin.
 ///
