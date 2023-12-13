@@ -74,6 +74,16 @@ FString ICheatCommand::GetFullDescription() const
 	return CommandInfo + " | " + FString::JoinBy(ArgumentsInfo, TEXT(" | "), &FArgumentInfo::ToString);
 }
 
+TArray<ICheatCommand*> ICheatCommand::GetVariants(const UWorld* InWorld) const
+{
+	TArray<ICheatCommand*> Variants;
+	if (GetVariantsFunc.IsSet())
+	{
+		(*GetVariantsFunc)(InWorld, OUT Variants);
+	}
+	return Variants;
+}
+
 void ICheatCommand::LogInfo(const FString& Message) const
 {
 	UE_LOG(LogCheatCmd, Display, TEXT("[%s] %s"), *CommandName, *Message);

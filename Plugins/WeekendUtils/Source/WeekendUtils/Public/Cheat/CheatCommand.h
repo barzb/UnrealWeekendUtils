@@ -94,7 +94,11 @@ public:
 	/** @returns the command info and arguments info in a single string. */
 	FString GetFullDescription() const;
 
-protected:
+	TArray<ICheatCommand*> GetVariants(const UWorld* InWorld) const;
+
+	using FGetVariantsFunc = TFunction<void(const UWorld*, TArray<ICheatCommand*>&)>;
+	TOptional<FGetVariantsFunc> GetVariantsFunc = {};
+
 	/** Temporary data container passed to the constructor. See macro definitions above for usage info. */
 	struct FDescriber
 	{
@@ -113,7 +117,8 @@ protected:
 		TArray<FArgumentInfo> ArgumentDescriptions;
 	};
 
-	ICheatCommand(const FString& InCommandName, const FDescriber&);
+protected:
+	ICheatCommand(const FString& InCommandName, const FDescriber& InDescriber);
 	virtual ~ICheatCommand() = default;
 	virtual void Execute() = 0;
 

@@ -94,6 +94,20 @@ namespace
 			return (A.IsNone() || A.Compare(B) < 0);
 		}
 	};
+
+	UWorld* FindPlayWorld()
+	{
+		// Determine the target world at the moment of execution,
+		// because the cheat menu might've been created in another level or even the editor
+		// before PIE, so it can't know which world is "current".
+		// The following approach is also how the engine does it for console commands:
+		UWorld* TargetWorld = nullptr;
+		if (const ULocalPlayer* Player = GEngine->GetDebugLocalPlayer(); IsValid(Player))
+		{
+			TargetWorld = Player->GetWorld();
+		}
+		return GEngine->GetCurrentPlayWorld(TargetWorld);
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -290,18 +304,7 @@ bool SCheatMenu::FEntry::MatchesFilterText(const FString& TextToFilter) const
 
 void SCheatMenu::FEntry::ExecuteCheatCommand()
 {
-	// Determine the target world at the moment of execution,
-	// because the cheat menu might've been created in another level or even the editor
-	// before PIE, so it can't know which world is "current".
-	// The following approach is also how the engine does it for console commands:
-	UWorld* TargetWorld = nullptr;
-	if (const ULocalPlayer* Player = GEngine->GetDebugLocalPlayer(); IsValid(Player))
-	{
-		TargetWorld = Player->GetWorld();
-	}
-	TargetWorld = GEngine->GetCurrentPlayWorld(TargetWorld);
-
-	CheatCommand->Execute(GetArgs(), TargetWorld);
+	CheatCommand->Execute(GetArgs(), FindPlayWorld());
 
 	// Save the args to the config ini, so they can be restored the next time the cheat menu opens:
 	if (GConfig != nullptr)
@@ -313,6 +316,8 @@ void SCheatMenu::FEntry::ExecuteCheatCommand()
 
 void SCheatMenu::CollectCheats()
 {
+	const UWorld* CurrentWorld = FindPlayWorld();
+
 	// Clear previous:
 	for (const TSharedPtr<FEntry>& Entry : Entries)
 	{
@@ -338,6 +343,11 @@ void SCheatMenu::CollectCheats()
 			Entries.Add(MakeShared<FEntry>(CheatCommand, Settings));
 			CheatCommand->OnLogMessage.AddSP(this, &SCheatMenu::HandleCheatLogMessage);
 			CheatCommand->OnAfterExecuted.AddSP(this, &SCheatMenu::HandleCheatExecuted);
+
+			for (ICheatCommand* Variant : CheatCommand->GetVariants(CurrentWorld))
+			{
+				Entries.Add(MakeShared<FEntry>(Variant, Settings));
+			}
 		}
 	}
 
