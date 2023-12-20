@@ -65,6 +65,9 @@ WEEKENDUTILS_API DECLARE_LOG_CATEGORY_EXTERN(LogCheatCmd, Log, All);
 class WEEKENDUTILS_API ICheatCommand
 {
 public:
+	///////////////////////////////////////////////////////////////////////////////////////
+	/// Nested Types:
+
 	using EArgumentStyle = Cheats::EVariableStyle::Type;
 	struct FArgumentInfo
 	{
@@ -74,30 +77,6 @@ public:
 		FString ToShortString() const;
 		FString ToString() const;
 	};
-
-	/** Event fired after the cheat command printed a log message. */
-	DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnLogMessage, const ICheatCommand&, ELogVerbosity::Type, const FString& /*Message*/);
-	FOnLogMessage OnLogMessage;
-
-	/** Event fired after the cheat was executed. */
-	DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnAfterExecuted, const ICheatCommand&, UWorld*, TArray<FString> /*Args*/);
-	FOnAfterExecuted OnAfterExecuted;
-
-	/** Executes this cheat command with given arguments and world, as if invoked by the console command. */
-	void Execute(const TArray<FString>& InArgs, UWorld* InWorld);
-
-	FORCEINLINE const FString& GetCommandName() const { return CommandName; }
-	FORCEINLINE const FString& GetDisplayName() const { return DisplayName; }
-	FORCEINLINE const FString& GetCommandInfo() const { return CommandInfo; }
-	FORCEINLINE const TArray<FArgumentInfo>& GetArgumentsInfo() const { return ArgumentsInfo; }
-
-	/** @returns the command info and arguments info in a single string. */
-	FString GetFullDescription() const;
-
-	TArray<ICheatCommand*> GetVariants(const UWorld* InWorld) const;
-
-	using FGetVariantsFunc = TFunction<void(const UWorld*, TArray<ICheatCommand*>&)>;
-	TOptional<FGetVariantsFunc> GetVariantsFunc = {};
 
 	/** Temporary data container passed to the constructor. See macro definitions above for usage info. */
 	struct FDescriber
@@ -117,12 +96,46 @@ public:
 		TArray<FArgumentInfo> ArgumentDescriptions;
 	};
 
+	///////////////////////////////////////////////////////////////////////////////////////
+	/// Events:
+
+	/** Event fired after the cheat command printed a log message. */
+	DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnLogMessage, const ICheatCommand&, ELogVerbosity::Type, const FString& /*Message*/);
+	FOnLogMessage OnLogMessage;
+
+	/** Event fired after the cheat was executed. */
+	DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnAfterExecuted, const ICheatCommand&, UWorld*, TArray<FString> /*Args*/);
+	FOnAfterExecuted OnAfterExecuted;
+
+	///////////////////////////////////////////////////////////////////////////////////////
+	/// Execution:
+
+	/** Executes this cheat command with given arguments and world, as if invoked by the console command. */
+	void Execute(const TArray<FString>& InArgs, UWorld* InWorld);
+
+	FORCEINLINE const FString& GetCommandName() const { return CommandName; }
+	FORCEINLINE const FString& GetDisplayName() const { return DisplayName; }
+	FORCEINLINE const FString& GetCommandInfo() const { return CommandInfo; }
+	FORCEINLINE const TArray<FArgumentInfo>& GetArgumentsInfo() const { return ArgumentsInfo; }
+
+	/** @returns the command info and arguments info in a single string. */
+	FString GetFullDescription() const;
+
+	///////////////////////////////////////////////////////////////////////////////////////
+	/// Variants:
+
+	/** @returns all runtime-generated variants of this cheat command, if existing. */
+	TArray<ICheatCommand*> GetVariants(const UWorld* InWorld) const;
+	TOptional<TFunction<void(const UWorld*, TArray<ICheatCommand*>&)>> GetRuntimeVariantsFunc = {};
+
 protected:
+	///////////////////////////////////////////////////////////////////////////////////////
+
 	ICheatCommand(const FString& InCommandName, const FDescriber& InDescriber);
 	virtual ~ICheatCommand() = default;
 	virtual void Execute() = 0;
 
-	////////////////////////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////////////////////////
 	/// (!) Members below are only valid inside the derived Execute() call:
 
 	/** Sends a log message with verbosity 'Display' to the logfile, console and any listeners (like the CheatMenu). */
@@ -201,7 +214,7 @@ private:
 	FString GetDefaultMissingArgumentError() const;
 
 	/// (!) Members above are only valid inside the derived Execute() call.
-	////////////////////////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////////////////////////
 
 	const FString CommandName;
 	const FString DisplayName;

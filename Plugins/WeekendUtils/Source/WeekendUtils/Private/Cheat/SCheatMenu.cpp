@@ -557,7 +557,7 @@ TSharedRef<SWidget> SCheatMenu::ConstructCheatCommandItems(const TArray<TSharedP
 	{
 		TSharedPtr<FEntry> Entry = *Itr;
 		const ICheatCommand* CheatCommand = Entry->CheatCommand;
-		const FString& CheatName = CheatCommand->GetCommandName();
+		const FString CheatName = CheatCommand->GetCommandName();
 		TSharedPtr<SVerticalBox> CommandBox;
 
 		OuterWrapBox->AddSlot()

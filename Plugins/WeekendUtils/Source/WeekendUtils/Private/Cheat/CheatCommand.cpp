@@ -77,9 +77,9 @@ FString ICheatCommand::GetFullDescription() const
 TArray<ICheatCommand*> ICheatCommand::GetVariants(const UWorld* InWorld) const
 {
 	TArray<ICheatCommand*> Variants;
-	if (GetVariantsFunc.IsSet())
+	if (GetRuntimeVariantsFunc.IsSet())
 	{
-		(*GetVariantsFunc)(InWorld, OUT Variants);
+		(*GetRuntimeVariantsFunc)(InWorld, OUT Variants);
 	}
 	return Variants;
 }

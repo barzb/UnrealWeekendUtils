@@ -12,8 +12,10 @@
 #include "CheatCommand.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////
-/// The following macros are intended to define cheat commands more conveniently.
-/// Commands will be created in cheat collections in the "Cheats::" namespace.
+/// The following macros are intended to define preset ("variant") cheat commands more
+/// conveniently. Variants are created and collected non-statically at runtime as soon
+/// as the cheat menu opens. This allows for dynamic cheats in different environments.
+///
 /// @example:
 /// 	DEFINE_CHEAT_COLLECTION(ExampleCheats, AsCheatMenuTab("Tab1").Section("Misc"))
 /// 	{
@@ -23,35 +25,45 @@
 /// 		.DescribeArgument<int32>("Amount", "The additional score. Default: 100")
 /// 		DEFINE_CHEAT_EXECUTE(IncreaseScoreCheat)
 /// 		{
-/// 			const int32 Amount = GetNextArgumentOr<int32>(100);
-/// 			UScoreSystem::AddScore(Amount);
-/// 			LogInfo("Score was increased by " + FString::FromInt(Amount));
+///				...
 /// 		}
 ///
-/// 		// ..Define more cheat commands
-/// 	} #todo
+/// 		BEGIN_DEFINE_CHEAT_VARIANTS(IncreaseScoreCheat)
+/// 			DEFINE_CHEAT_VARIANT("Cheat.Score.Increase.By100",
+/// 				"+100 Score", IncreaseScoreCheat.GetCommandInfo(), {"100"})
+/// 			DEFINE_CHEAT_VARIANT("Cheat.Score.Increase.By200",
+/// 				"+200 Score", "Custom Description", {"200"})
+/// 			if (GetWorld() && GetWorld()->IsPlayInEditor())
+/// 			{
+/// 				DEFINE_CHEAT_VARIANT("Cheat.Score.Increase.ForEditorOnly",
+/// 					"+999 Score (PIE only)", "Only available in PIE", {"999"})
+/// 			}
+/// 		END_DEFINE_CHEAT_VARIANTS(IncreaseScoreCheat)
+/// 	}
 ///////////////////////////////////////////////////////////////////////////////////////
 
 #define BEGIN_DEFINE_CHEAT_VARIANTS(CheatName)                                        \
 			class F##CheatName##CommandVariants : public TArray<FCheatCommandVariant> \
 			{                                                                         \
+				ICheatCommand* OriginalCheat;                                         \
 				TObjectPtr<const UWorld> PrivateTempWorld;                            \
 				const UWorld* GetWorld() const { return PrivateTempWorld; }           \
 			public:                                                                   \
 				F##CheatName##CommandVariants()                                       \
 				{                                                                     \
-					CheatName.GetVariantsFunc =                                       \
-					[this](const UWorld* World, TArray<ICheatCommand*>& OutVariants ) \
+					OriginalCheat = &CheatName;                                       \
+					CheatName.GetRuntimeVariantsFunc =                                \
+					[this](const UWorld* World, TArray<ICheatCommand*>& OutVariants)  \
 					{                                                                 \
 						Empty(); PrivateTempWorld = World;
 
-#define DEFINE_CHEAT_VARIANT(CheatName, CommandName, DisplayName, ...)                \
+#define DEFINE_CHEAT_VARIANT(CommandName, DisplayName, Description, ArgsArray)        \
 						OutVariants.Add(&Add_GetRef(FCheatCommandVariant(             \
-								&CheatName, CommandName,                              \
+								OriginalCheat, CommandName,                           \
 								ICheatCommand::FDescriber()                           \
 								.DisplayAs(DisplayName)                               \
-								.DescribeCheat(CheatName.GetCommandInfo()),           \
-								{__VA_ARGS__}                                         \
+								.DescribeCheat(Description),                          \
+								ArgsArray                                             \
 						)));
 
 #define END_DEFINE_CHEAT_VARIANTS(CheatName) PrivateTempWorld = nullptr;              \
@@ -60,7 +72,8 @@
 ///////////////////////////////////////////////////////////////////////////////////////
 
 /**
- * todo
+ * Proxy class for variants of another cheat command that predefine passed arguments at construction.
+ * @remark: See macros defined above for how to use.
  */
 class FCheatCommandVariant final : public ICheatCommand
 {
@@ -77,6 +90,7 @@ public:
 		OriginalCommand->Execute(OverrideArgs, GetWorld());
 	}
 
+protected:
 	ICheatCommand* OriginalCommand;
 	TArray<FString> OverrideArgs;
 };
