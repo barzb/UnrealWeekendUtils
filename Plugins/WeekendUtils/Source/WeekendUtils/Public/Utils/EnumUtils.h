@@ -33,7 +33,8 @@ namespace WeekendUtils
 	template <typename EnumType, typename = typename TEnableIf<TIsEnumClass<EnumType>::Value>::Type>
 	FString EnumToString(const EnumType& Value)
 	{
-		return UEnum::GetValueAsString(Value);
+		const UEnum* Enum = StaticEnum<EnumType>();
+		return Enum->GetNameStringByValue(static_cast<int64>(Value));
 	}
 
 	/** Attempts to parse a string into given enum class value out param. @returns whether the operation was successful. */
