@@ -30,11 +30,12 @@ public class WeekendUtils : ModuleRules
 			new string[]
 			{
 				"Core",
-				"Slate",
-				"SlateCore",
+				"EnhancedInput",
+				"GameplayAbilities",
+				"GameplayTasks",
+				"Slate", "SlateCore",
 				"StructUtils",
-				"UMG"
-				// ... add other public dependencies that you statically link with here ...
+				"UMG",
 			}
 		);
 
@@ -46,7 +47,6 @@ public class WeekendUtils : ModuleRules
 				"GameFeatures",
 				"InputCore",
 				"Projects",
-				// ... add private dependencies that you statically link with here ...
 			}
 		);
 	}
