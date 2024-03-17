@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2023 by Benjamin Barz and contributors. See file: CREDITS.md
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendUtils UE5 Plugin.
 ///
@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "CheatCommandCollection.h" // For use in macros.
+#include "CheatCommandCollection.h"
 #include "CheatMenuSettings.h"
 #include "Engine/World.h"
 #include "HAL/ConsoleManager.h"

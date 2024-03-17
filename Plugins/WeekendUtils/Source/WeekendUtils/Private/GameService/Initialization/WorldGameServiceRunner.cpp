@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2023 by Benjamin Barz and contributors. See file: CREDITS.md
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendUtils UE5 Plugin.
 ///
@@ -92,8 +92,8 @@ void UWorldGameServiceRunner::Deinitialize()
 	// Clean up the ServiceManager, so the service runner in the next world can start anew:
 	if (UGameServiceManager* ServiceManager = UGameServiceManager::GetPtr(); IsValid(ServiceManager))
 	{
-		ServiceManager->ShutdownAllServices();
-		ServiceManager->ClearServiceRegister();
+		ServiceManager->ShutdownAllServicesWithLifetime(EGameServiceLifetime::ShutdownWithWorld);
+		ServiceManager->ClearServiceRegister(EGameServiceLifetime::ShutdownWithWorld);
 	}
 
 	Super::Deinitialize();

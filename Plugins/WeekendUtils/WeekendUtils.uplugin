@@ -2,7 +2,7 @@
 	"FileVersion": 3,
 	"Version": 1,
 	"VersionName": "1.0",
-	"FriendlyName": "WeekendUtils",
+	"FriendlyName": "Weekend Utilities",
 	"Description": "Shared utilities and stuff.",
 	"Category": "Utility",
 	"CreatedBy": "Benjamin Barz",
@@ -29,11 +29,23 @@
 	],
 	"Plugins": [
 		{
-			"Name": "StructUtils",
+			"Name": "EnhancedInput",
 			"Enabled": true
 		},
 		{
 			"Name": "GameFeatures",
+			"Enabled": true
+		},
+		{
+			"Name": "GameplayAbilities",
+			"Enabled": true
+		},
+		{
+			"Name": "ModelViewViewModel",
+			"Enabled": true
+		},
+		{
+			"Name": "StructUtils",
 			"Enabled": true
 		}
 	]

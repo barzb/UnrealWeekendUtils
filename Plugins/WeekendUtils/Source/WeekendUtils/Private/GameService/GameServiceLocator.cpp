@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2023 by Benjamin Barz and contributors. See file: CREDITS.md
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendUtils UE5 Plugin.
 ///
@@ -28,5 +28,6 @@ UObject* UGameServiceLocator::FindServiceInternal(const TSubclassOf<UObject>& Se
 	if (!IsValid(GameServiceManager))
 		return nullptr;
 
-	return GameServiceManager->FindStartedServiceInstance(ServiceClass);
+	UObject* ServiceInstance = GameServiceManager->FindStartedServiceInstance(ServiceClass);
+	return (IsValid(ServiceInstance) ? ServiceInstance : nullptr);
 }

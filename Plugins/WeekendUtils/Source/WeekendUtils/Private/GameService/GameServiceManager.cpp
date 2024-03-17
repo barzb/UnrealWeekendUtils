@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2023 by Benjamin Barz and contributors. See file: CREDITS.md
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendUtils UE5 Plugin.
 ///
@@ -13,7 +13,11 @@
 #include "WeekendUtils.h"
 #include "GameService/AsyncGameServiceBase.h"
 
-//#todo-service-later what about per-player services and replication of services?
+UGameServiceManager::UGameServiceManager()
+{
+	ServiceClassRegisters.Add(EGameServiceLifetime::ShutdownWithGameInstance);
+	ServiceClassRegisters.Add(EGameServiceLifetime::ShutdownWithWorld);
+}
 
 void UGameServiceManager::RegisterServices(const UGameServiceConfig& Config)
 {
@@ -31,10 +35,15 @@ void UGameServiceManager::RegisterServices(const UGameServiceConfig& Config)
 
 bool UGameServiceManager::RegisterServiceClass(const FGameServiceClass& ServiceClass, const FGameServiceInstanceClass& InstanceClass, int32 Priority)
 {
-	if (!ensureMsgf(!WasServiceStarted(ServiceClass), TEXT("RegisterServiceClass is not allowed to be called after the service has already been started.")))
+	if (WasServiceStarted(ServiceClass))
+	{
+		UE_LOG(LogGameService, Log,
+			TEXT("RegisterServiceClass<%s, %s> was ignored because of already running service (%s)."),
+			*GetNameSafe(ServiceClass), *GetNameSafe(InstanceClass), *GetNameSafe(FindStartedServiceInstance(ServiceClass)));
 		return false;
+	}
 
-	FServiceClassRegistryEntry& RegisteredEntry = ServiceClassRegister.FindOrAdd(ServiceClass);
+	FServiceClassRegistryEntry& RegisteredEntry = RegisterServiceClassInternal(ServiceClass, InstanceClass);
 	if (RegisteredEntry.InstanceClass == InstanceClass)
 		return false; // Already registered.
 
@@ -65,11 +74,14 @@ void UGameServiceManager::StartRegisteredServices(UWorld& TargetWorld)
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UGameServiceManager.StartRegisteredServices"), STAT_GameServiceManager_StartRegisteredServices, STATGROUP_GameService);
 	UE_LOG(LogGameService, Log, TEXT(">>> Starting registered game services for world (%s):"), *TargetWorld.GetName());
 
-	TArray<FServiceClassRegistryEntry> RegisteredServices;
-	ServiceClassRegister.GenerateValueArray(OUT RegisteredServices);
-	for (const FServiceClassRegistryEntry& ServiceEntry : RegisteredServices)
+	for (auto RegisterItr = ServiceClassRegisters.CreateIterator(); RegisterItr; ++RegisterItr)
 	{
-		StartService(TargetWorld, ServiceEntry.RegisterClass, ServiceEntry.InstanceClass);
+		TArray<FServiceClassRegistryEntry> RegisteredServices;
+		RegisterItr.Value().GenerateValueArray(OUT RegisteredServices);
+		for (const FServiceClassRegistryEntry& ServiceEntry : RegisteredServices)
+		{
+			StartService(TargetWorld, ServiceEntry.RegisterClass, ServiceEntry.InstanceClass);
+		}
 	}
 
 	UE_LOG(LogGameService, Log, TEXT("<<< Finished starting registered game services for world (%s)"), *TargetWorld.GetName());
@@ -87,7 +99,7 @@ UGameServiceBase& UGameServiceManager::StartService(UWorld& TargetWorld, const F
 		return *RunningInstance;
 	}
 
-	FServiceClassRegistryEntry& RegisteredEntry = ServiceClassRegister.FindOrAdd(ServiceClass);
+	FServiceClassRegistryEntry& RegisteredEntry = RegisterServiceClassInternal(ServiceClass, ServiceInstance);
 	if (RegisteredEntry.InstanceClass != nullptr)
 	{
 		ensureMsgf(ServiceInstance.GetClass() == RegisteredEntry.InstanceClass,
@@ -138,7 +150,7 @@ UGameServiceBase& UGameServiceManager::StartService(UWorld& TargetWorld, const F
 				StartOrderedServices.IndexOfByKey(StartedServiceClass), *ServiceClass->GetName(), *StartedServiceInstance->GetName());
 
 			StartedServices.Add(ServiceClass, StartedServiceInstance);
-			FServiceClassRegistryEntry& RegisteredEntry = ServiceClassRegister.FindOrAdd(ServiceClass);
+			FServiceClassRegistryEntry& RegisteredEntry = RegisterServiceClassInternal(ServiceClass, InstanceClass);
 			RegisteredEntry.RegisterClass = ServiceClass;
 			RegisteredEntry.InstanceClass = InstanceClass;
 
@@ -147,7 +159,19 @@ UGameServiceBase& UGameServiceManager::StartService(UWorld& TargetWorld, const F
 	}
 
 	// Create a new instance and start it:
-	return StartService(TargetWorld, ServiceClass, *CreateServiceInstance(TargetWorld, InstanceClass));
+	UObject* ServiceOwner;
+	switch (UGameServiceBase::GetLifetimeOf(InstanceClass))
+	{
+		default:
+		case EGameServiceLifetime::ShutdownWithWorld:
+			ServiceOwner =  &TargetWorld;
+			break;
+
+		case EGameServiceLifetime::ShutdownWithGameInstance:
+			ServiceOwner = TargetWorld.GetGameInstance();
+			break;
+	}
+	return StartService(TargetWorld, ServiceClass, *CreateServiceInstance(*ServiceOwner, InstanceClass));
 }
 
 UGameServiceBase& UGameServiceManager::StartService(UWorld& TargetWorld, const FGameServiceInstanceClass& InstanceClass)
@@ -172,7 +196,12 @@ TOptional<UGameServiceBase*> UGameServiceManager::TryStartService(UWorld& Target
 
 bool UGameServiceManager::IsServiceRegistered(const FGameServiceClass& ServiceClass) const
 {
-	return ServiceClassRegister.Contains(ServiceClass);
+	for (auto RegisterItr = ServiceClassRegisters.CreateConstIterator(); RegisterItr; ++RegisterItr)
+	{
+		if (RegisterItr.Value().Contains(ServiceClass))
+			return true;
+	}
+	return false;
 }
 
 bool UGameServiceManager::WasServiceStarted(const FGameServiceClass& ServiceClass) const
@@ -212,25 +241,37 @@ UGameServiceBase* UGameServiceManager::FindStartedServiceInstance(const FGameSer
 TArray<FGameServiceClass> UGameServiceManager::GetAllRegisteredServiceClasses() const
 {
 	TArray<FGameServiceClass> Result;
-	ServiceClassRegister.GenerateKeyArray(OUT Result);
+	for (auto RegisterItr = ServiceClassRegisters.CreateConstIterator(); RegisterItr; ++RegisterItr)
+	{
+		TArray<FGameServiceClass> IntermediateResult;
+		RegisterItr.Value().GenerateKeyArray(OUT IntermediateResult);
+		Result += IntermediateResult;
+	}
 	return Result;
 }
 
 TArray<FGameServiceInstanceClass> UGameServiceManager::GetAllRegisteredServiceInstanceClasses() const
 {
 	TArray<FGameServiceInstanceClass> Result;
+	for (auto RegisterItr = ServiceClassRegisters.CreateConstIterator(); RegisterItr; ++RegisterItr)
 	{
+		TArray<FGameServiceInstanceClass> IntermediateResult;
 		TArray<FServiceClassRegistryEntry> Entries;
-		ServiceClassRegister.GenerateValueArray(OUT Entries);
-		Algo::Transform(Entries, OUT Result, &FServiceClassRegistryEntry::InstanceClass);
+		RegisterItr.Value().GenerateValueArray(OUT Entries);
+		Algo::Transform(Entries, OUT IntermediateResult, &FServiceClassRegistryEntry::InstanceClass);
+		Result += IntermediateResult;
 	}
 	return Result;
 }
 
 TOptional<FGameServiceInstanceClass> UGameServiceManager::FindRegisteredServiceInstanceClass(const FGameServiceClass& ServiceClass) const
 {
-	const FServiceClassRegistryEntry* Entry = ServiceClassRegister.Find(ServiceClass);
-	return (Entry ? Entry->InstanceClass : TOptional<FGameServiceInstanceClass>());
+	for (auto RegisterItr = ServiceClassRegisters.CreateConstIterator(); RegisterItr; ++RegisterItr)
+	{
+		if (const FServiceClassRegistryEntry* Entry = RegisterItr.Value().Find(ServiceClass))
+			return Entry->InstanceClass;
+	}
+	return TOptional<FGameServiceInstanceClass>();
 }
 
 TArray<FGameServiceClass> UGameServiceManager::GetAllStartedServiceClasses() const
@@ -279,16 +320,40 @@ void UGameServiceManager::ShutdownAllServices()
 	StartedServices.Empty();
 }
 
-void UGameServiceManager::ClearServiceRegister()
+void UGameServiceManager::ShutdownAllServicesWithLifetime(const EGameServiceLifetime& Lifetime)
 {
-	ServiceClassRegister.Empty();
-	UE_LOG(LogGameService, Log, TEXT("Service register was cleared."));
+	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UGameServiceManager.ShutdownAllServicesWithLifetime"), STAT_GameServiceManager_ShutdownAllServicesWithLifetime, STATGROUP_GameService);
+
+	// Shutdown the services in the reverse order of how they were started:
+	for (int32 i = 0; i < StartOrderedServices.Num(); ++i)
+	{
+		const FGameServiceClass& ServiceClass = StartOrderedServices[i];
+		if (StartedServices[ServiceClass]->GetLifetime() != Lifetime)
+			continue;
+
+		StartOrderedServices.RemoveAt(i--);
+		TStrongObjectPtr<UGameServiceBase> ServiceToShutdown = StartedServices[ServiceClass];
+		while (const FGameServiceClass* RegisteredServiceClass = StartedServices.FindKey(ServiceToShutdown))
+		{
+			// Remove all classes & aliases associated with the instance: 
+			StartedServices.Remove(*RegisteredServiceClass);
+		}
+
+		UE_LOG(LogGameService, Log, TEXT("#%3d | Shutdown game service: %s"), StartOrderedServices.Num(), *GetNameSafe(ServiceToShutdown.Get()));
+		ServiceToShutdown->ShutdownService();
+	}
 }
 
-UGameServiceBase* UGameServiceManager::CreateServiceInstance(UWorld& OwningWorld, const FGameServiceClass& ServiceInstanceClass)
+void UGameServiceManager::ClearServiceRegister(const EGameServiceLifetime& Lifetime)
+{
+	ServiceClassRegisters.FindOrAdd(Lifetime).Empty();
+	UE_LOG(LogGameService, Log, TEXT("Service register for %s was cleared."), *LexToString(Lifetime));
+}
+
+UGameServiceBase* UGameServiceManager::CreateServiceInstance(UObject& Owner, const FGameServiceClass& ServiceInstanceClass)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UGameServiceManager.CreateServiceInstance"), STAT_GameServiceManager_CreateServiceInstance, STATGROUP_GameService);
-	return NewObject<UGameServiceBase>(&OwningWorld, ServiceInstanceClass);
+	return NewObject<UGameServiceBase>(&Owner, ServiceInstanceClass);
 }
 
 void UGameServiceManager::StartServiceDependencies(UWorld& TargetWorld, const UGameServiceBase& ServiceInstance)
@@ -306,4 +371,16 @@ void UGameServiceManager::StartServiceDependencies(UWorld& TargetWorld, const UG
 		// If the above check triggers, then we probably have a service that depends on another service that was never configured
 		// in the UGameServiceConfig for the currently running map. => The service manager doesn't know which UGameService to instance.
 	}
+}
+
+UGameServiceManager::FServiceClassRegistryEntry& UGameServiceManager::RegisterServiceClassInternal(const FGameServiceClass& ServiceClass, const FGameServiceInstanceClass& InstanceClass)
+{
+	const EGameServiceLifetime Lifetime = UGameServiceBase::GetLifetimeOf(InstanceClass);
+	return ServiceClassRegisters.FindOrAdd(Lifetime).FindOrAdd(ServiceClass);
+}
+
+UGameServiceManager::FServiceClassRegistryEntry& UGameServiceManager::RegisterServiceClassInternal(const FGameServiceClass& ServiceClass, const UGameServiceBase& ServiceInstance)
+{
+	const EGameServiceLifetime Lifetime = ServiceInstance.GetLifetime();
+	return ServiceClassRegisters.FindOrAdd(Lifetime).FindOrAdd(ServiceClass);
 }

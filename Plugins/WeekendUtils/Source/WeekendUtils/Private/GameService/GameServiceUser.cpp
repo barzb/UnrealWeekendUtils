@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2023 by Benjamin Barz and contributors. See file: CREDITS.md
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendUtils UE5 Plugin.
 ///
@@ -21,17 +21,17 @@
 
 const TArray<FGameServiceUser::FGameServiceClass>& FGameServiceUser::GetServiceClassDependencies() const
 {
-	return ServiceDependencies.ToArray();
+	return ServiceDependencies;
 }
 
 const TArray<TSubclassOf<USubsystem>>& FGameServiceUser::GetSubsystemClassDependencies() const
 {
-	return SubsystemDependencies.ToArray();
+	return SubsystemDependencies;
 }
 
 const TArray<TSubclassOf<USubsystem>>& FGameServiceUser::GetOptionalSubsystemClassDependencies() const
 {
-	return OptionalSubsystemDependencies.ToArray();
+	return OptionalSubsystemDependencies;
 }
 
 bool FGameServiceUser::AreAllDependenciesReady(const UObject* ServiceUser) const
@@ -42,7 +42,7 @@ bool FGameServiceUser::AreAllDependenciesReady(const UObject* ServiceUser) const
 bool FGameServiceUser::AreServiceDependenciesReady() const
 {
 	const UGameServiceManager& ServiceManager = UGameServiceManager::Get();
-	for (const FGameServiceClass& ServiceClass : ServiceDependencies.ToArray())
+	for (const FGameServiceClass& ServiceClass : ServiceDependencies)
 	{
 		if (!ServiceManager.IsServiceRunning(ServiceClass))
 			return false;
@@ -52,13 +52,13 @@ bool FGameServiceUser::AreServiceDependenciesReady() const
 
 bool FGameServiceUser::AreSubsystemDependenciesReady(const UObject* ServiceUser) const
 {
-	for (const TSubclassOf<USubsystem>& SubsystemClass : SubsystemDependencies.ToArray())
+	for (const TSubclassOf<USubsystem>& SubsystemClass : SubsystemDependencies)
 	{
 		TWeakObjectPtr<const USubsystem> SubsystemInstance = FindSubsystemDependency(ServiceUser, *SubsystemClass);
 		if (!SubsystemInstance.IsValid())
 			return false;
 	}
-	for (const TSubclassOf<USubsystem>& SubsystemClass : OptionalSubsystemDependencies.ToArray())
+	for (const TSubclassOf<USubsystem>& SubsystemClass : OptionalSubsystemDependencies)
 	{
 		TWeakObjectPtr<const USubsystem> SubsystemInstance = FindSubsystemDependency(ServiceUser, *SubsystemClass);
 		if (!SubsystemInstance.IsValid())
@@ -79,7 +79,7 @@ void FGameServiceUser::WaitForDependencies(const UObject* ServiceUser, FOnWaitin
 		// Start all service dependencies, which just happens:
 		UGameServiceManager& ServiceManager = UGameServiceManager::Get();
 		UWorld& ServiceWorld = *ServiceUser->GetWorld();
-		for (const FGameServiceClass& ServiceClass : ServiceDependencies.ToArray())
+		for (const FGameServiceClass& ServiceClass : ServiceDependencies)
 		{
 			const bool bWasDependencyStarted = ServiceManager.TryStartService(ServiceWorld, ServiceClass).IsSet();
 			ensureMsgf(bWasDependencyStarted, TEXT("%s is waiting for dependency %s, which could not be started. Is %s properly configured?"),
@@ -106,14 +106,14 @@ void FGameServiceUser::WaitForDependencies(const UObject* ServiceUser, TFunction
 void FGameServiceUser::InitializeWorldSubsystemDependencies_Internal(FSubsystemCollectionBase& SubsystemCollection)
 {
 	SubsystemCollection.InitializeDependency<UWorldGameServiceRunner>();
-	for (const TSubclassOf<USubsystem>& SubsystemDependency : SubsystemDependencies.ToArray())
+	for (const TSubclassOf<USubsystem>& SubsystemDependency : SubsystemDependencies)
 	{
 		if (SubsystemDependency->IsChildOf<UWorldSubsystem>())
 		{
 			SubsystemCollection.InitializeDependency(SubsystemDependency);
 		}
 	}
-	for (const TSubclassOf<USubsystem>& SubsystemDependency : OptionalSubsystemDependencies.ToArray())
+	for (const TSubclassOf<USubsystem>& SubsystemDependency : OptionalSubsystemDependencies)
 	{
 		if (SubsystemDependency->IsChildOf<UWorldSubsystem>())
 		{
@@ -135,6 +135,8 @@ UObject* FGameServiceUser::FindOptionalGameService_Internal(const FGameServiceCl
 
 UGameServiceBase& FGameServiceUser::UseGameService(const UObject* ServiceUser, const FGameServiceClass& ServiceClass) const
 {
+	CheckGameServiceDependencies();
+
 	// (!) ServiceDependencies must be registered for GameServiceUsers.
 	ensureMsgf(ServiceDependencies.Contains(ServiceClass),
 		TEXT("UseGameService<%s>() was called, but service is not registered as dependency."),

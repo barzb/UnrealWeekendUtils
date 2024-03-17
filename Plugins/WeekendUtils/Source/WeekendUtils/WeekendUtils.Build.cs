@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 by Benjamin Barz and contributors. See file: CREDITS.md
+ * Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
  *
  * This file is part of the WeekendUtils UE5 Plugin.
  *
@@ -30,24 +30,39 @@ public class WeekendUtils : ModuleRules
 			new string[]
 			{
 				"Core",
-				"Slate",
-				"SlateCore",
+				"DeveloperSettings",
+				"EnhancedInput",
+				"GameplayAbilities",
+				"GameplayTasks",
+				"ModelViewViewModel",
+				"Slate", "SlateCore",
 				"StructUtils",
-				"UMG"
-				// ... add other public dependencies that you statically link with here ...
+				"UMG",
 			}
 		);
 
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
+				"AssetRegistry",
 				"CoreUObject",
 				"Engine",
 				"GameFeatures",
 				"InputCore",
 				"Projects",
-				// ... add private dependencies that you statically link with here ...
 			}
 		);
+
+		if (Target.Type == TargetType.Editor)
+		{
+			PrivateDependencyModuleNames.AddRange(
+				new string[]
+				{
+					"AssetTools",
+					"Blutility",
+					"UnrealEd",
+				}
+			);
+		}
 	}
 }

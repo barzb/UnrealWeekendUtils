@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2023 by Benjamin Barz and contributors. See file: CREDITS.md
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendUtils UE5 Plugin.
 ///
@@ -66,21 +66,19 @@ public:
 	 * @note Singleton services are only instanced once (per world) for the register-type.
 	 * @note Services that are registered with the same InstanceClass will share the same instance.
 	 */
-	template<typename ServiceClass, class InstanceClass = ServiceClass>
+	template<class ServiceClass, class InstanceClass = ServiceClass>
 	void AddSingletonService()
 	{
 		static_assert(!TIsAbstract<InstanceClass>::Value);
 		static_assert(TIsDerivedFrom<InstanceClass, ServiceClass>::Value);
 		static_assert(TIsDerivedFrom<InstanceClass, UGameServiceBase>::Value);
 		SingletonServices.Add(GameService::GetServiceUClass<ServiceClass>(), InstanceClass::StaticClass());
-
-		//#todo-service-later return some sort of struct ref to the service config entry where additional dependencies can be configured
 	}
 
 	FORCEINLINE int32 GetNumConfiguredServices() const { return SingletonServices.Num(); }
 	FORCEINLINE const TMap<FGameServiceClass, FGameServiceInstanceClass>& GetConfiguredServices() const
 	{
-		return SingletonServices; //#todo-service-later consider supporting ScopedServices as well
+		return SingletonServices;
 	}
 
 	/** Configs with a higher priority will overwrite service registrations from configs with lower priority. */

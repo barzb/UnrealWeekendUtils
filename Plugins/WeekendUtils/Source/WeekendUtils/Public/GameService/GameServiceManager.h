@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2023 by Benjamin Barz and contributors. See file: CREDITS.md
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendUtils UE5 Plugin.
 ///
@@ -49,6 +49,8 @@ public:
 
 	/** @returns the singleton GameServiceManager, which is valid as long as the @UEngine is available. */
 	FORCEINLINE static UGameServiceManager* GetPtr() { return GEngine ? GEngine->GetEngineSubsystem<UGameServiceManager>() : nullptr; }
+
+	UGameServiceManager();
 
 	/**
 	 * Registers all service classes in passed @UGameServiceConfig, as long as they have not been configured already with a higher priority.
@@ -141,14 +143,20 @@ public:
 	TOptional<FGameServiceInstanceClass> DetermineServiceInstanceClass(const FGameServiceClass& ServiceClass) const;
 
 	/**
-	 * Shuts down ALL started service instanced and removes kept lifetime references to them.
+	 * Shuts down ALL started service instances and removes all internal references to them.
 	 * Services are shut down in in the reverse order of how they were started, so they can properly deregister from their dependencies.
 	 * This is called each time a world tears down by @UWorldGameServiceRunner.
 	 */
 	void ShutdownAllServices();
 
-	/** Clears all service configurations that were registered. This is called each time a world tears down by @UWorldGameServiceRunner. */
-	void ClearServiceRegister();
+	/**
+	 * Shuts down ALL started service instances of a certain lifetime and removes all internal references to them.
+	 * Services are shut down in in the reverse order of how they were started, so they can properly deregister from their dependencies.
+	 */
+	void ShutdownAllServicesWithLifetime(const EGameServiceLifetime& Lifetime);
+
+	/** Clears all service configurations that were registered for a certain service lifetime. */
+	void ClearServiceRegister(const EGameServiceLifetime& Lifetime);
 
 private:
 	struct FServiceClassRegistryEntry
@@ -158,8 +166,12 @@ private:
 		int32 RegisterPriority = 0;
 	};
 
+	struct FServiceClassRegister : TMap<FGameServiceClass, FServiceClassRegistryEntry> {};
+
 	/** Key: ServiceClass | Value: Registry Entry */
-	TMap<FGameServiceClass, FServiceClassRegistryEntry> ServiceClassRegister;
+	//TMap<FGameServiceClass, FServiceClassRegistryEntry> ServiceClassRegister;
+
+	TMap<EGameServiceLifetime, FServiceClassRegister> ServiceClassRegisters;
 
 	/**
 	 * Key: ServiceClass | Value: Service Instance
@@ -170,6 +182,9 @@ private:
 	/** List of all service classes that have been started, ordered by when they were started. First started service is at [0]. */
 	TArray<FGameServiceClass> StartOrderedServices;
 
-	static UGameServiceBase* CreateServiceInstance(UWorld& OwningWorld, const FGameServiceClass& ServiceInstanceClass);
+	static UGameServiceBase* CreateServiceInstance(UObject& Owner, const FGameServiceClass& ServiceInstanceClass);
 	void StartServiceDependencies(UWorld& TargetWorld, const UGameServiceBase& ServiceInstance);
+
+	FServiceClassRegistryEntry& RegisterServiceClassInternal(const FGameServiceClass& ServiceClass, const FGameServiceInstanceClass& InstanceClass);
+	FServiceClassRegistryEntry& RegisterServiceClassInternal(const FGameServiceClass& ServiceClass, const UGameServiceBase& ServiceInstance);
 };
