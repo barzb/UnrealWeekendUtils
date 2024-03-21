@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) Benjamin Barz & Contributors (see CREDITS.md)
+Copyright (c) 2021-2024 Benjamin Barz & Contributors (see CREDITS.md)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
