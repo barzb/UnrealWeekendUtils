@@ -37,8 +37,8 @@ WE_END_DEFINE_SPEC(GameServiceUser)
 		UGameServiceConfig::CreateForWorld(TestWorld->AsRef(), [](UGameServiceConfig& Config)
 		{
 			Config.SetPriority(100);
-			Config.AddSingletonService<UVoidService>();
-			Config.AddSingletonService<IMockGameServiceInterface, UInterfacedService>();
+			Config.AddService<UVoidService>();
+			Config.AddService<IMockGameServiceInterface, UInterfacedService>();
 		});
 
 		// Note that this "mock" is not mocking the unit under test, just wrapping it within a UObject.

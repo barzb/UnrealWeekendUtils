@@ -34,3 +34,9 @@ void UGameServiceConfig::RegisterWithGameServiceManager() const
 	UE_LOG(LogGameService, Verbose, TEXT("Registering GameServiceConfig (%s) with GameServiceManager"), *GetName());
 	UGameServiceManager::Get().RegisterServices(*this);
 }
+
+void UGameServiceConfig::ResetConfiguredServices()
+{
+	ConfiguredServices.Reset();
+	ConfiguredTemplates.Reset();
+}

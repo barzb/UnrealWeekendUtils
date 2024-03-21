@@ -45,9 +45,9 @@ WE_END_DEFINE_SPEC(GameServiceManager)
 		It("should only register configured service classes", [this]
 		{
 			UGameServiceConfig* Config = NewObject<UGameServiceConfig>(TestWorld->AsPtr());
-			Config->AddSingletonService<UVoidService, UVoidService2>();
-			Config->AddSingletonService<UVoidObserverService>();
-			Config->AddSingletonService<IMockGameServiceInterface, UInterfacedService>();
+			Config->AddService<UVoidService, UVoidService2>();
+			Config->AddService<UVoidObserverService>();
+			Config->AddService<IMockGameServiceInterface, UInterfacedService>();
 			TestEqual("RegisteredServicesClasses", ServiceManager->GetAllRegisteredServiceClasses().Num(), 0);
 
 			ServiceManager->RegisterServices(*Config);
@@ -66,9 +66,9 @@ WE_END_DEFINE_SPEC(GameServiceManager)
 		It("should only register the configured service instance classes", [this]
 		{
 			UGameServiceConfig* Config = NewObject<UGameServiceConfig>(TestWorld->AsPtr());
-			Config->AddSingletonService<UVoidService, UVoidService2>();
-			Config->AddSingletonService<UVoidObserverService>();
-			Config->AddSingletonService<IMockGameServiceInterface, UInterfacedService>();
+			Config->AddService<UVoidService, UVoidService2>();
+			Config->AddService<UVoidObserverService>();
+			Config->AddService<IMockGameServiceInterface, UInterfacedService>();
 			TestEqual("RegisteredInstanceClasses", ServiceManager->GetAllRegisteredServiceInstanceClasses().Num(), 0);
 
 			using FRegisteredInstanceClasses = GameService::TDependencyList<UGameServiceBase>;
@@ -90,21 +90,21 @@ WE_END_DEFINE_SPEC(GameServiceManager)
 		It("should overwrite registrations with lower or equal priority", [this]
 		{
 			UGameServiceConfig* Config100 = NewObject<UGameServiceConfig>(TestWorld->AsPtr());
-			Config100->AddSingletonService<UVoidService, UVoidService>();
+			Config100->AddService<UVoidService, UVoidService>();
 			Config100->SetPriority(100);
 
 			UGameServiceConfig* Config99 = NewObject<UGameServiceConfig>(TestWorld->AsPtr());
-			Config99->AddSingletonService<UVoidService, UVoidService2>();
-			Config99->AddSingletonService<UVoidObserverFanService>();
+			Config99->AddService<UVoidService, UVoidService2>();
+			Config99->AddService<UVoidObserverFanService>();
 			Config99->SetPriority(99);
 
 			UGameServiceConfig* Config101 = NewObject<UGameServiceConfig>(TestWorld->AsPtr());
-			Config101->AddSingletonService<UVoidService, UVoidService2>();
-			Config101->AddSingletonService<UVoidObserverService>();
+			Config101->AddService<UVoidService, UVoidService2>();
+			Config101->AddService<UVoidObserverService>();
 			Config101->SetPriority(101);
 
 			UGameServiceConfig* Config101_2 = NewObject<UGameServiceConfig>(TestWorld->AsPtr());
-			Config101_2->AddSingletonService<UVoidService, UVoidService>();
+			Config101_2->AddService<UVoidService, UVoidService>();
 			Config101_2->SetPriority(101);
 
 			using FRegisteredInstanceClasses = GameService::TDependencyList<UGameServiceBase>;
@@ -139,9 +139,9 @@ WE_END_DEFINE_SPEC(GameServiceManager)
 		It("should NOT start any registered service", [this]
 		{
 			UGameServiceConfig* Config = NewObject<UGameServiceConfig>(TestWorld->AsPtr());
-			Config->AddSingletonService<UVoidService, UVoidService2>();
-			Config->AddSingletonService<UVoidObserverService>();
-			Config->AddSingletonService<IMockGameServiceInterface, UInterfacedService>();
+			Config->AddService<UVoidService, UVoidService2>();
+			Config->AddService<UVoidObserverService>();
+			Config->AddService<IMockGameServiceInterface, UInterfacedService>();
 
 			ServiceManager->RegisterServices(*Config);
 			TestFalse("WasServiceStarted<UVoidService>()", ServiceManager->WasServiceStarted<UVoidService>());
@@ -215,8 +215,8 @@ WE_END_DEFINE_SPEC(GameServiceManager)
 		{
 			// First register the dependency service classes, so the manager knows which classes to instance for the dependencies:
 			UGameServiceConfig* Config = NewObject<UGameServiceConfig>(TestWorld->AsPtr());
-			Config->AddSingletonService<UVoidService>();
-			Config->AddSingletonService<UVoidObserverService>();
+			Config->AddService<UVoidService>();
+			Config->AddService<UVoidObserverService>();
 			ServiceManager->RegisterServices(*Config);
 
 			// (i) Dependencies: UVoidObserverAssistantService -> UVoidObserverService -> UVoidService
@@ -243,9 +243,9 @@ WE_END_DEFINE_SPEC(GameServiceManager)
 		It("should create instances for all previously registered service classes", [this]
 		{
 			UGameServiceConfig* Config = NewObject<UGameServiceConfig>(TestWorld->AsPtr());
-			Config->AddSingletonService<UVoidService, UVoidService2>();
-			Config->AddSingletonService<UVoidObserverService>();
-			Config->AddSingletonService<IMockGameServiceInterface, UInterfacedService>();
+			Config->AddService<UVoidService, UVoidService2>();
+			Config->AddService<UVoidObserverService>();
+			Config->AddService<IMockGameServiceInterface, UInterfacedService>();
 			ServiceManager->RegisterServices(*Config);
 
 			ServiceManager->StartRegisteredServices(TestWorld->AsRef());
@@ -322,9 +322,9 @@ WE_END_DEFINE_SPEC(GameServiceManager)
 		It("should clear any previously registered service classes", [this]
 		{
 			UGameServiceConfig* Config = NewObject<UGameServiceConfig>(TestWorld->AsPtr());
-			Config->AddSingletonService<UVoidService, UVoidService2>();
-			Config->AddSingletonService<UVoidObserverService>();
-			Config->AddSingletonService<IMockGameServiceInterface, UInterfacedService>();
+			Config->AddService<UVoidService, UVoidService2>();
+			Config->AddService<UVoidObserverService>();
+			Config->AddService<IMockGameServiceInterface, UInterfacedService>();
 			ServiceManager->RegisterServices(*Config);
 
 			ServiceManager->ClearServiceRegister(EGameServiceLifetime::ShutdownWithWorld);

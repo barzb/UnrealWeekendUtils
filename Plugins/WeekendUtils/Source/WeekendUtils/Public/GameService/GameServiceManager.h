@@ -63,7 +63,7 @@ public:
 	 * @remark Only allowed to be called before configured service has been started.
 	 * @returns whether the service was registered successfully.
 	 */
-	bool RegisterServiceClass(const FGameServiceClass& ServiceClass, const FGameServiceInstanceClass& InstanceClass, int32 Priority = 0);
+	bool RegisterServiceClass(const FGameServiceClass& ServiceClass, const FGameServiceInstanceClass& InstanceClass, int32 Priority = 0, const UGameServiceBase* TemplateInstance = nullptr);
 
 	/** Creates and starts all service instances that were previously registered, and all resulting service dependencies. */
 	void StartRegisteredServices(UWorld& TargetWorld);
@@ -75,7 +75,7 @@ public:
 	 * will be made available through all ServiceClasses it was started for.
 	 */
 	UGameServiceBase& StartService(UWorld& TargetWorld, const FGameServiceClass& ServiceClass, UGameServiceBase& ServiceInstance);
-	UGameServiceBase& StartService(UWorld& TargetWorld, const FGameServiceClass& ServiceClass, const FGameServiceInstanceClass& InstanceClass);
+	UGameServiceBase& StartService(UWorld& TargetWorld, const FGameServiceClass& ServiceClass, const FGameServiceInstanceClass& InstanceClass, const UGameServiceBase* TemplateInstance = nullptr);
 	UGameServiceBase& StartService(UWorld& TargetWorld, const FGameServiceInstanceClass& InstanceClass);
 
 	template<typename ServiceClass>
@@ -163,14 +163,13 @@ private:
 	{
 		FGameServiceClass RegisterClass = nullptr;
 		FGameServiceInstanceClass InstanceClass = nullptr;
+		TWeakObjectPtr<const UGameServiceBase> InstanceTemplate = nullptr;
 		int32 RegisterPriority = 0;
 	};
 
 	struct FServiceClassRegister : TMap<FGameServiceClass, FServiceClassRegistryEntry> {};
 
 	/** Key: ServiceClass | Value: Registry Entry */
-	//TMap<FGameServiceClass, FServiceClassRegistryEntry> ServiceClassRegister;
-
 	TMap<EGameServiceLifetime, FServiceClassRegister> ServiceClassRegisters;
 
 	/**
@@ -182,7 +181,7 @@ private:
 	/** List of all service classes that have been started, ordered by when they were started. First started service is at [0]. */
 	TArray<FGameServiceClass> StartOrderedServices;
 
-	static UGameServiceBase* CreateServiceInstance(UObject& Owner, const FGameServiceClass& ServiceInstanceClass);
+	static UGameServiceBase* CreateServiceInstance(UObject& Owner, const FGameServiceClass& ServiceInstanceClass, const UGameServiceBase* TemplateInstance);
 	void StartServiceDependencies(UWorld& TargetWorld, const UGameServiceBase& ServiceInstance);
 
 	FServiceClassRegistryEntry& RegisterServiceClassInternal(const FGameServiceClass& ServiceClass, const FGameServiceInstanceClass& InstanceClass);

@@ -19,7 +19,7 @@
 /**
  * Project settings for the @USaveGameService and its surrounding API.
  */
-UCLASS(Config = Game, DefaultConfig, meta = (DisplayName = "SaveGame Service"))
+UCLASS(Config = Game, DefaultConfig, meta = (DisplayName = "Savegame Service"))
 class WEEKENDUTILS_API USaveGameServiceSettings : public UDeveloperSettings
 {
 	GENERATED_BODY()

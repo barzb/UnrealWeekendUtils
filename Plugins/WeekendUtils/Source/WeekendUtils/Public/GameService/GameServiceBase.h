@@ -35,7 +35,7 @@ DEFINE_ENUM_STRING_CONVERTERS(GameServiceLifetime, EGameServiceLifetime);
  * Each derived service class also gains access to the inherited GameServiceUser API to configure
  * and access dependencies to other services or subsystems.
  */
-UCLASS(Abstract)
+UCLASS(Abstract, EditInlineNew)
 class WEEKENDUTILS_API UGameServiceBase : public UObject, public FGameServiceUser
 {
 	GENERATED_BODY()

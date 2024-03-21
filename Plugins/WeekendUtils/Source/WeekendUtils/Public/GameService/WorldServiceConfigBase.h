@@ -17,7 +17,7 @@
 /**
  * Base class for configurations whose CDO will be automatically registered with the @UGameServiceManager.
  * Derived configurations should define at least one world name pattern.
- * When a world whith matching name is entered, the @UWorldGameServiceRunner will automatically register
+ * When a world with matching name is entered, the @UWorldGameServiceRunner will automatically register
  * the CDO of the config with the service manager.
  */
 UCLASS(Abstract)

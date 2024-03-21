@@ -19,7 +19,7 @@
 /**
  * Configuration container for the @UGameServiceManager.
  */
-UCLASS(NotBlueprintable, NotBlueprintType)
+UCLASS(CollapseCategories, NotBlueprintable, NotBlueprintType)
 class WEEKENDUTILS_API UGameServiceConfig : public UObject
 {
 	GENERATED_BODY()
@@ -36,8 +36,8 @@ public:
 	 * UGameServiceConfig::CreateForWorld(World, [](UGameServiceConfig& Config)
 	 * {
 	 *    Config.SetPriority(7);
-	 *    Config.AddSingletonService<USomeService>();
-	 *    Config.AddSingletonService<IAnotherServiceInterface, UAnotherServiceImpl>();
+	 *    Config.AddService<USomeService>();
+	 *    Config.AddService<IAnotherServiceInterface, UAnotherServiceImpl>();
 	 * });
 	 */
 	static UGameServiceConfig& CreateForWorld(UWorld& World, TFunction<void(UGameServiceConfig&)> ConfigExec);
@@ -52,8 +52,8 @@ public:
 	 * UGameServiceConfig::CreateForNextWorld([](UGameServiceConfig& Config)
 	 * {
 	 *    Config.SetPriority(7);
-	 *    Config.AddSingletonService<USomeService>();
-	 *    Config.AddSingletonService<IAnotherServiceInterface, UAnotherServiceImpl>();
+	 *    Config.AddService<USomeService>();
+	 *    Config.AddService<IAnotherServiceInterface, UAnotherServiceImpl>();
 	 * });
 	 */
 	static UGameServiceConfig& CreateForNextWorld(TFunction<void(UGameServiceConfig&)> ConfigExec);
@@ -63,33 +63,72 @@ public:
 
 	/**
 	 * Configures a game service class to be registered.
-	 * @note Singleton services are only instanced once (per world) for the register-type.
+	 * @note Services are only instanced once (=> singleton) for the register-type.
 	 * @note Services that are registered with the same InstanceClass will share the same instance.
 	 */
 	template<class ServiceClass, class InstanceClass = ServiceClass>
-	void AddSingletonService()
+	void AddService()
 	{
 		static_assert(!TIsAbstract<InstanceClass>::Value);
 		static_assert(TIsDerivedFrom<InstanceClass, ServiceClass>::Value);
 		static_assert(TIsDerivedFrom<InstanceClass, UGameServiceBase>::Value);
-		SingletonServices.Add(GameService::GetServiceUClass<ServiceClass>(), InstanceClass::StaticClass());
+		ConfiguredServices.Add(GameService::GetServiceUClass<ServiceClass>(), InstanceClass::StaticClass());
 	}
 
-	FORCEINLINE int32 GetNumConfiguredServices() const { return SingletonServices.Num(); }
+	/**
+	 * Configures a game service class to be registered.
+	 * @note Services are only instanced once (=> singleton) for the register-type.
+	 * @note Services that are registered with the same InstanceClass will share the same instance.
+	 */
+	template<class ServiceClass>
+	void AddService(const FGameServiceInstanceClass& InstanceClass)
+	{
+		check(InstanceClass != nullptr);
+		check(InstanceClass->IsChildOf<ServiceClass>());
+		check(!InstanceClass->HasAnyClassFlags(CLASS_Abstract));
+		ConfiguredServices.Add(GameService::GetServiceUClass<ServiceClass>(), InstanceClass);
+	}
+
+	/**
+	 * Configures a game service class to be registered.
+	 * The created service instance will be based on provided template object (can be CDO). 
+	 * @note Services are only instanced once (=> singleton) for the register-type.
+	 * @note Services that are registered with the same InstanceClass will share the same instance.
+	 */
+	template<class ServiceClass>
+	void AddService(const UGameServiceBase& TemplateInstance)
+	{
+		check(!TemplateInstance.GetClass()->HasAnyClassFlags(CLASS_Abstract));
+		const TSubclassOf<UObject> RegisterClass = GameService::GetServiceUClass<ServiceClass>();
+		ConfiguredServices.Add(RegisterClass, TemplateInstance.GetClass());
+		ConfiguredTemplates.Add(RegisterClass, &TemplateInstance);
+	}
+
+	FORCEINLINE int32 GetNumConfiguredServices() const { return ConfiguredServices.Num(); }
 	FORCEINLINE const TMap<FGameServiceClass, FGameServiceInstanceClass>& GetConfiguredServices() const
 	{
-		return SingletonServices;
+		return ConfiguredServices;
+	}
+	FORCEINLINE const UGameServiceBase* GetConfiguredServiceTemplate(const FGameServiceClass& RegisterClass) const
+	{
+		return (ConfiguredTemplates.Contains(RegisterClass) ? ConfiguredTemplates[RegisterClass] : nullptr);
 	}
 
 	/** Configs with a higher priority will overwrite service registrations from configs with lower priority. */
-	FORCEINLINE void SetPriority(uint32 NewPriority) { RegisterPriority = NewPriority; }
-	FORCEINLINE uint32 GetPriority() const { return RegisterPriority; }
+	FORCEINLINE void SetPriority(uint32 NewPriority) { ConfiguredPriority = NewPriority; }
+	FORCEINLINE uint32 GetPriority() const { return ConfiguredPriority; }
 
 protected:
-	UPROPERTY()
-	uint32 RegisterPriority = 0;
-
 	/** Key: FGameServiceClass | Value: FGameServiceInstanceClass */
-	UPROPERTY()
-	TMap<TSubclassOf<UObject>, TSubclassOf<UGameServiceBase>> SingletonServices;
+	UPROPERTY(VisibleAnywhere)
+	TMap<TSubclassOf<UObject>, TSubclassOf<UGameServiceBase>> ConfiguredServices;
+
+	/** Key: FGameServiceClass | Value: UGameService Instance */
+	UPROPERTY(VisibleAnywhere)
+	TMap<TSubclassOf<UObject>, TObjectPtr<const UGameServiceBase>> ConfiguredTemplates;
+
+	UPROPERTY(VisibleAnywhere)
+	uint32 ConfiguredPriority = 0;
+
+	void ResetConfiguredServices();
 };
