@@ -12,7 +12,7 @@
 #include "CoreMinimal.h"
 
 /**
- * Utility container for synchronizing the elements of an object pointer list with an arbitrary list of data.
+ * Utility container for synchronizing the elements of an object pointer list with an arbitrary array of data.
  *
  * @example:
  *
@@ -20,35 +20,30 @@
  *	TArray<FSomeModel> Models = { ... };
  *
  *	TObjectListSynchronizer(ViewModels, Models)
- *	.ForEachMissingElement<USomeViewModel>([this](FSomeModel& Model) -> USomeViewModel*
+ *	.ForEachMissingElement([this](FSomeModel& Model) -> USomeViewModel*
  *	{
  *		USomeViewModel* NewViewModel = NewObject<USomeViewModel>(this);
  *		NewViewModel->BindToModel(Model);
  *		return NewViewModel;
  *	})
- *	.ForEachUpdatedElement<USomeViewModel>([](USomeViewModel& ViewModel, FSomeModel& Model)
+ *	.ForEachUpdatedElement([](USomeViewModel& ViewModel, FSomeModel& Model)
  *	{
  *		ViewModel.UnbindFromModel();
  *		ViewModel.BindToModel(Model);
  *	})
- *	.ForEachRemovedElement<USomeViewModel>([](USomeViewModel& ViewModel)
+ *	.ForEachRemovedElement([](USomeViewModel& ViewModel)
  *	{
  *		ViewModel.UnbindFromModel();
  *	});
  */
-template <typename ObjectListType, typename InitListType>
+template <typename ObjectType, typename InitListType>
 class TObjectListSynchronizer
 {
 public:
-	TObjectListSynchronizer(ObjectListType& InObjectList, InitListType& InInitDataList) :
-		ObjectList(InObjectList), InitDataList(InInitDataList)
-	{
-		while (ObjectList.Num() > InitDataList.Num())
-		{
-			RemovedObjects.Add(ObjectList.Pop());
-		}
-		UpdatedObjects = ObjectList;
-	}
+	TObjectListSynchronizer(TArray<ObjectType*>& InObjectList, InitListType& InInitDataList) :
+		ObjectList(ObjectPtrWrap(InObjectList)), InitDataList(InInitDataList) { Init(); }
+	TObjectListSynchronizer(TArray<TObjectPtr<ObjectType>>& InObjectList, InitListType& InInitDataList) :
+		ObjectList(InObjectList), InitDataList(InInitDataList) { Init(); }
 
 	/** PredicateType must equivalent to: TFunctionRef<ObjectType*(InitDataType&)> */
 	template <typename PredicateType>
@@ -89,9 +84,18 @@ public:
 	}
 
 private:
-	ObjectListType& ObjectList;
+	TArray<TObjectPtr<ObjectType>>& ObjectList;
 	InitListType& InitDataList;
-	ObjectListType RemovedObjects = {};
-	ObjectListType UpdatedObjects = {};
+	TArray<ObjectType*> RemovedObjects = {};
+	TArray<ObjectType*> UpdatedObjects = {};
+
+	void Init()
+	{
+		while (ObjectList.Num() > InitDataList.Num())
+		{
+			RemovedObjects.Add(ObjectList.Pop());
+		}
+		UpdatedObjects = ObjectList;
+	}
 };
 
