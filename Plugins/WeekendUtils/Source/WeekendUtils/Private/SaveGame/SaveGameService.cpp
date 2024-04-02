@@ -32,50 +32,55 @@ namespace
 	}
 }
 
-FAsyncSaveGameHandle USaveGameService::RequestAutosave()
+FAsyncSaveGameHandle USaveGameService::RequestAutosave(const FDebugContext& Context)
 {
 	if (!IsAutosavingAllowed())
 		return FAsyncSaveGameHandle();
 
-	return RequestSaveCurrentSaveGameToSlot(GetAutosaveSlotName());
+	return RequestSaveCurrentSaveGameToSlot(Context, GetAutosaveSlotName());
 }
 
-FAsyncSaveGameHandle USaveGameService::RequestAutosave(const FOnSaveLoadCompleted& Callback)
+FAsyncSaveGameHandle USaveGameService::RequestAutosave(const FDebugContext& Context, const FOnSaveLoadCompleted& Callback)
 {
 	if (!IsAutosavingAllowed())
 		return FAsyncSaveGameHandle();
 
-	return RequestSaveCurrentSaveGameToSlot(GetAutosaveSlotName(), Callback);
+	return RequestSaveCurrentSaveGameToSlot(Context, GetAutosaveSlotName(), Callback);
 }
 
-FAsyncSaveGameHandle USaveGameService::RequestSaveCurrentSaveGameToSlot(const FSlotName& SlotName)
+FAsyncSaveGameHandle USaveGameService::RequestSaveCurrentSaveGameToSlot(const FDebugContext& Context, const FSlotName& SlotName)
 {
-	return EnqueueSaveRequest(SlotName, MakeShared<FSaveCurrentSaveGameRequest>(*this));
+	AddDebugEntry("RequestSaveCurrentSaveGameToSlot", Context);
+	return EnqueueSaveRequest(SlotName, MakeShared<FSaveCurrentSaveGameRequest>(*this, Context));
 }
 
-FAsyncSaveGameHandle USaveGameService::RequestSaveCurrentSaveGameToSlot(const FSlotName& SlotName, const FOnSaveLoadCompleted& Callback)
+FAsyncSaveGameHandle USaveGameService::RequestSaveCurrentSaveGameToSlot(const FDebugContext& Context, const FSlotName& SlotName, const FOnSaveLoadCompleted& Callback)
 {
-	return EnqueueSaveRequest(SlotName, MakeShared<FSaveCurrentSaveGameRequest>(*this, Callback));
+	AddDebugEntry("RequestSaveCurrentSaveGameToSlot", Context);
+	return EnqueueSaveRequest(SlotName, MakeShared<FSaveCurrentSaveGameRequest>(*this, Context, Callback));
 }
 
-FAsyncLoadGameHandle USaveGameService::RequestLoadCurrentSaveGameFromSlot(const FSlotName& SlotName)
+FAsyncLoadGameHandle USaveGameService::RequestLoadCurrentSaveGameFromSlot(const FDebugContext& Context, const FSlotName& SlotName)
 {
-	return EnqueueLoadRequest(SlotName, MakeShared<FLoadToCurrentSaveGameRequest>(*this));
+	AddDebugEntry("RequestLoadCurrentSaveGameFromSlot", Context);
+	return EnqueueLoadRequest(SlotName, MakeShared<FLoadToCurrentSaveGameRequest>(*this, Context));
 }
 
-FAsyncLoadGameHandle USaveGameService::RequestLoadCurrentSaveGameFromSlot(const FSlotName& SlotName, const FOnSaveLoadCompleted& Callback)
+FAsyncLoadGameHandle USaveGameService::RequestLoadCurrentSaveGameFromSlot(const FDebugContext& Context, const FSlotName& SlotName, const FOnSaveLoadCompleted& Callback)
 {
-	return EnqueueLoadRequest(SlotName, MakeShared<FLoadToCurrentSaveGameRequest>(*this, Callback));
+	AddDebugEntry("RequestLoadCurrentSaveGameFromSlot", Context);
+	return EnqueueLoadRequest(SlotName, MakeShared<FLoadToCurrentSaveGameRequest>(*this, Context, Callback));
 }
 
-FAsyncLoadGameHandle USaveGameService::RequestLoadAndTravelIntoCurrentSaveGameFromSlot(const FSlotName& SlotName)
+FAsyncLoadGameHandle USaveGameService::RequestLoadAndTravelIntoCurrentSaveGameFromSlot(const FDebugContext& Context, const FSlotName& SlotName)
 {
-	return EnqueueLoadRequest(SlotName, MakeShared<FLoadAndTravelIntoToCurrentSaveGameRequest>(*this));
+	AddDebugEntry("RequestLoadAndTravelIntoCurrentSaveGameFromSlot", Context);
+	return EnqueueLoadRequest(SlotName, MakeShared<FLoadAndTravelIntoToCurrentSaveGameRequest>(*this, Context));
 }
 
-FAsyncLoadGameHandle USaveGameService::RequestLoadAndTravelIntoCurrentSaveGameFromSlot(const FSlotName& SlotName, const FOnSaveLoadCompleted& Callback)
+FAsyncLoadGameHandle USaveGameService::RequestLoadAndTravelIntoCurrentSaveGameFromSlot(const FDebugContext& Context, const FSlotName& SlotName, const FOnSaveLoadCompleted& Callback)
 {
-	return EnqueueLoadRequest(SlotName, MakeShared<FLoadAndTravelIntoToCurrentSaveGameRequest>(*this, Callback));
+	return EnqueueLoadRequest(SlotName, MakeShared<FLoadAndTravelIntoToCurrentSaveGameRequest>(*this, Context, Callback));
 }
 
 bool USaveGameService::IsSaveRequestAlive(const FAsyncSaveGameHandle& Handle) const
@@ -193,6 +198,7 @@ bool USaveGameService::TryLoadCurrentSaveGameFromSlotSynchronous(const FSlotName
 	CurrentSaveGame = FCurrentSaveGame::CreateFromLoadedGame(*LoadedSaveGame, SlotName);
 
 	SetStatus(EStatus::Idle);
+	AddDebugEntry("[TryLoadCurrentSaveGameFromSlotSynchronous] " + SlotName);
 
 	OnAfterRestored.Broadcast(CurrentSaveGame);
 	return true;
@@ -205,6 +211,7 @@ TSet<USaveGame*> USaveGameService::PreloadSaveGamesSynchronous(const TSet<FSlotN
 		return Result;
 
 	SetStatus(EStatus::Loading);
+	AddDebugEntry("[PreloadSaveGamesSynchronous] " + FString::Join(SlotNames, TEXT(", ")));
 
 	CachedSaveGames.Empty();
 	for (const FSlotName& SlotName : SlotNames)
@@ -238,15 +245,17 @@ void USaveGameService::PreloadSaveGamesAsync(const TSet<FSlotName>& SlotNames, c
 	{
 	public:
 		explicit FPreloadRequest(USaveGameService& InService, const TSharedRef<int32>& InRemainingSlots, const TSharedRef<TSet<USaveGame*>>& InResult, const FOnPreloadCompleted& InCallback) :
-			ISaveLoadRequest(InService), RemainingSlots(InRemainingSlots), Result(InResult), Callback(InCallback) {}
+			ISaveLoadRequest(InService, ""), RemainingSlots(InRemainingSlots), Result(InResult), Callback(InCallback) {}
 		virtual void Finish(USaveGame* RequestedSaveGame, bool bSuccess) override
 		{
+			Runtime = FPlatformTime::Seconds() - StartTime;
 			if (bSuccess)
 			{
 				Result->Add(RequestedSaveGame);
 			}
 			if (--(*RemainingSlots) <= 0)
 			{
+				Service.AddDebugEntry("PreloadSaveGamesAsync", "FPreloadRequest::Finish", bSuccess, Runtime);
 				Callback.ExecuteIfBound(*Result);
 			}
 		}
@@ -282,6 +291,7 @@ void USaveGameService::RestoreAsCurrentSaveGame(USaveGame& SaveGame, TOptional<F
 		LoadedFromSlotName = FindSlotName(SaveGame);
 	}
 
+	AddDebugEntry("[RestoreAsCurrentSaveGame]");
 	CurrentSaveGame = FCurrentSaveGame::CreateFromLoadedGame(SaveGame, LoadedFromSlotName);
 	OnAfterRestored.Broadcast(CurrentSaveGame);
 }
@@ -299,11 +309,19 @@ void USaveGameService::RestoreAsAndTravelIntoCurrentSaveGame(USaveGame& SaveGame
 bool USaveGameService::TryTravelIntoCurrentSaveGame()
 {
 	check(SaveLoadBehavior);
-	return SaveLoadBehavior->TryTravelToSavedLevel(CurrentSaveGame);
+	if (!SaveLoadBehavior->TryTravelToSavedLevel(CurrentSaveGame))
+	{
+		AddDebugEntry("[TryTravelIntoCurrentSaveGame] failed");
+		return false;
+	}
+
+	AddDebugEntry("[TryTravelIntoCurrentSaveGame] succeeded");
+	return true;
 }
 
 void USaveGameService::CreateAndRestoreNewSaveGameAsCurrent()
 {
+	AddDebugEntry("[CreateAndRestoreNewSaveGameAsCurrent]");
 	USaveGame& SaveGameObject = SaveLoadBehavior->CreateNewSavegameObject(*this);
 	CurrentSaveGame = FCurrentSaveGame::CreateFromNewGame(SaveGameObject);
 	OnAfterRestored.Broadcast(CurrentSaveGame);
@@ -353,54 +371,60 @@ void USaveGameService::ProcessPendingRequests()
 	}
 }
 
-FSaveLoadLockHandle USaveGameService::LockAutosaving(const UObject& KeyHolder)
+FSaveLoadLockHandle USaveGameService::LockAutosaving(const UObject& KeyHolder, const FDebugContext& Context)
 {
 	const FSaveLoadLockHandle NewKey = FSaveLoadLockHandle::NewGuid();
 	FSaveLoadLock& NewLock = ActiveAutosaveLocks.Add(NewKey);
 	NewLock.KeyHolder = MakeWeakObjectPtr(&KeyHolder);
+	AddDebugEntry("LockAutosaving", FString::Printf(TEXT("KeyHolder: %s, Context: %s, Key: %s"), *KeyHolder.GetName(), *Context, *NewKey.ToString()));
 	return NewKey;
 }
 
-void USaveGameService::UnlockAutosaving(const FSaveLoadLockHandle& Key)
+void USaveGameService::UnlockAutosaving(const FSaveLoadLockHandle& Key, const FDebugContext& Context)
 {
 	if (!ActiveAutosaveLocks.Contains(Key))
 		return;
 
 	ActiveAutosaveLocks.Remove(Key);
+	AddDebugEntry("UnlockAutosaving", FString::Printf(TEXT("Context: %s, Key: %s"), *Context, *Key.ToString()));
 	ProcessPendingRequests();
 }
 
-FSaveLoadLockHandle USaveGameService::LockSaving(const UObject& KeyHolder)
+FSaveLoadLockHandle USaveGameService::LockSaving(const UObject& KeyHolder, const FDebugContext& Context)
 {
 	const FSaveLoadLockHandle NewKey = FSaveLoadLockHandle::NewGuid();
 	FSaveLoadLock& NewLock = ActiveSaveLocks.Add(NewKey);
 	NewLock.KeyHolder = MakeWeakObjectPtr(&KeyHolder);
+	AddDebugEntry("LockSaving", FString::Printf(TEXT("KeyHolder: %s, Context: %s, Key: %s"), *KeyHolder.GetName(), *Context, *NewKey.ToString()));
 	return NewKey;
 }
 
-void USaveGameService::UnlockSaving(const FSaveLoadLockHandle& Key)
+void USaveGameService::UnlockSaving(const FSaveLoadLockHandle& Key, const FDebugContext& Context)
 {
 	if (!ActiveSaveLocks.Contains(Key))
 		return;
 
 	ActiveSaveLocks.Remove(Key);
+	AddDebugEntry("UnlockSaving", FString::Printf(TEXT("Context: %s, Key: %s"), *Context, *Key.ToString()));
 	ProcessPendingRequests();
 }
 
-FSaveLoadLockHandle USaveGameService::LockLoading(const UObject& KeyHolder)
+FSaveLoadLockHandle USaveGameService::LockLoading(const UObject& KeyHolder, const FDebugContext& Context)
 {
 	const FSaveLoadLockHandle NewKey = FSaveLoadLockHandle::NewGuid();
 	FSaveLoadLock& NewLock = ActiveLoadLocks.Add(NewKey);
 	NewLock.KeyHolder = MakeWeakObjectPtr(&KeyHolder);
+	AddDebugEntry("LockLoading", FString::Printf(TEXT("KeyHolder: %s, Context: %s, Key: %s"), *KeyHolder.GetName(), *Context, *NewKey.ToString()));
 	return NewKey;
 }
 
-void USaveGameService::UnlockLoading(const FSaveLoadLockHandle& Key)
+void USaveGameService::UnlockLoading(const FSaveLoadLockHandle& Key, const FDebugContext& Context)
 {
 	if (!ActiveLoadLocks.Contains(Key))
 		return;
 
 	ActiveLoadLocks.Remove(Key);
+	AddDebugEntry("UnlockLoading", FString::Printf(TEXT("Context: %s, Key: %s"), *Context, *Key.ToString()));
 	ProcessPendingRequests();
 }
 
@@ -434,11 +458,10 @@ bool USaveGameService::IsBusySavingOrLoading() const
 	return (IsBusyLoading() || IsBusySaving());
 }
 
-USaveLoadBehavior& USaveGameService::CreateSaveLoadBehavior()
+USaveLoadBehavior& USaveGameService::CreateSaveLoadBehavior(const USaveGameServiceSettings& Settings)
 {
 	checkf(!SaveLoadBehavior, TEXT("SaveLoadBehavior was already created"));
 
-	const USaveGameServiceSettings& Settings = *GetDefault<USaveGameServiceSettings>();
 	TSoftClassPtr<USaveLoadBehavior> BehaviorClass = Settings.SaveLoadBehavior;
 
 #if WITH_EDITORONLY_DATA
@@ -482,7 +505,11 @@ USaveGameSerializer& USaveGameService::CreateSaveGameSerializer()
 
 void USaveGameService::StartService()
 {
-	SaveLoadBehavior = &CreateSaveLoadBehavior();
+	const USaveGameServiceSettings& Settings = *GetDefault<USaveGameServiceSettings>();
+	DebugHistoryEntriesToKeep = Settings.DebugHistoryEntriesToKeep;
+	DebugHistory.Empty(DebugHistoryEntriesToKeep);
+
+	SaveLoadBehavior = &CreateSaveLoadBehavior(Settings);
 	SaveGameSerializer = &CreateSaveGameSerializer();
 
 	SetStatus(EStatus::Idle);
@@ -737,8 +764,33 @@ void USaveGameService::SetStatus(const EStatus& NewStatus)
 	OnStatusChanged.Broadcast(NewStatus);
 }
 
+void USaveGameService::AddDebugEntry(const FString& Entry)
+{
+	DebugHistory.Add(FString::Printf(TEXT("(%s UTC)\t %s"), *FDateTime::UtcNow().ToString(), *Entry));
+	while (DebugHistory.Num() >= DebugHistoryEntriesToKeep)
+	{
+		// Shrink head-first to fit desired size:
+		DebugHistory.RemoveAt(0);
+	}
+}
+
+void USaveGameService::AddDebugEntry(const FString& Operation, const FDebugContext& Context)
+{
+	AddDebugEntry(FString::Printf(TEXT("[%s] %s"), *Operation, *Context));
+}
+
+void USaveGameService::AddDebugEntry(const FString& Operation, const FDebugContext& Context, bool bSuccess, double ExecTime)
+{
+	AddDebugEntry(FString::Printf(TEXT("[%s] %s (took %.3fsec): %s"), *Operation, (bSuccess ? TEXT("succeeded") : TEXT("failed")), ExecTime, *Context));
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////
 /// REQUESTS
+
+void USaveGameService::ISaveLoadRequest::Process()
+{
+	StartTime = FPlatformTime::Seconds();
+}
 
 void USaveGameService::ISaveLoadRequest::Finish(USaveGame* RequestedSaveGame, bool bSuccess)
 {
@@ -755,6 +807,8 @@ void USaveGameService::FLoadToCurrentSaveGameRequest::Finish(USaveGame* Requeste
 		Service.RestoreAsCurrentSaveGame(*RequestedSaveGame);
 	}
 
+	Runtime = FPlatformTime::Seconds() - StartTime;
+	Service.AddDebugEntry("LoadToCurrentSaveGameRequest", Context, bSuccess, Runtime);
 	ISaveLoadRequest::Finish(RequestedSaveGame, bSuccess);
 }
 
@@ -765,5 +819,7 @@ void USaveGameService::FLoadAndTravelIntoToCurrentSaveGameRequest::Finish(USaveG
 		Service.RestoreAsAndTravelIntoCurrentSaveGame(*RequestedSaveGame);
 	}
 
+	Runtime = FPlatformTime::Seconds() - StartTime;
+	Service.AddDebugEntry("LoadAndTravelIntoToCurrentSaveGameRequest", Context, bSuccess, Runtime);
 	ISaveLoadRequest::Finish(RequestedSaveGame, bSuccess);
 }

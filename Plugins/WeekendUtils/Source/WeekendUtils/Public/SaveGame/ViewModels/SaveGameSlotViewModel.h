@@ -12,23 +12,23 @@
 #include "CoreMinimal.h"
 #include "MVVMViewModelBase.h"
 
-#include "SaveGameSlot_VM.generated.h"
+#include "SaveGameSlotViewModel.generated.h"
 
 class USaveGame;
 class USaveGameService;
 
 /**
- * Base class of a SaveGame slot ViewModel that acts as list element of @USaveGameList_VM.
+ * Base class of a SaveGame slot ViewModel that acts as list element of @USaveGameListViewModel.
  */
 UCLASS(Abstract)
-class WEEKENDUTILS_API USaveGameSlot_VM : public UMVVMViewModelBase
+class WEEKENDUTILS_API USaveGameSlotViewModel : public UMVVMViewModelBase
 {
 	GENERATED_BODY()
 
 public:
 	using FSlotName = FString;
 
-	/** Events intended for @USaveGameList_VM to listen to. */
+	/** Events intended for @USaveGameListViewModel to listen to. */
 	DECLARE_DELEGATE_RetVal_OneParam(bool, FOnSaveLoadRequested, const FSlotName&)
 	FOnSaveLoadRequested OnLoadRequested;
 	FOnSaveLoadRequested OnSaveRequested;

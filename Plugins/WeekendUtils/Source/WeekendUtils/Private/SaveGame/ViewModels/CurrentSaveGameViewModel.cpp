@@ -7,16 +7,16 @@
 ///
 ///////////////////////////////////////////////////////////////////////////////////////
 
-#include "SaveGame/ViewModels/CurrentSaveGame_VM.h"
+#include "SaveGame/ViewModels/CurrentSaveGameViewModel.h"
 
 #include "SaveGame/SaveGameService.h"
 
-UCurrentSaveGame_VM::UCurrentSaveGame_VM()
+UCurrentSaveGameViewModel::UCurrentSaveGameViewModel()
 {
 	ServiceDependencies.Add<USaveGameService>();
 }
 
-void UCurrentSaveGame_VM::BeginUsage()
+void UCurrentSaveGameViewModel::BeginUsage()
 {
 	USaveGameService& SaveGameService = UseGameService<USaveGameService>(this);
 	SaveGameService.OnAfterRestored.AddUObject(this, &ThisClass::UpdateForCurrentSaveGame);
@@ -24,7 +24,7 @@ void UCurrentSaveGame_VM::BeginUsage()
 	UpdateForCurrentSaveGame(SaveGameService.GetCurrentSaveGame());
 }
 
-void UCurrentSaveGame_VM::ContinueSaveGame()
+void UCurrentSaveGameViewModel::ContinueSaveGame()
 {
 	if (bCanContinue)
 	{
@@ -32,24 +32,24 @@ void UCurrentSaveGame_VM::ContinueSaveGame()
 	}
 }
 
-void UCurrentSaveGame_VM::CreateNewGame()
+void UCurrentSaveGameViewModel::CreateNewGame()
 {
 	UseGameService<USaveGameService>(this).CreateAndRestoreNewSaveGameAsCurrent();
 }
 
-void UCurrentSaveGame_VM::BeginDestroy()
+void UCurrentSaveGameViewModel::BeginDestroy()
 {
 	EndUsage();
 
 	Super::BeginDestroy();
 }
 
-void UCurrentSaveGame_VM::UpdateForCurrentSaveGame(const FCurrentSaveGame& CurrentSaveGame)
+void UCurrentSaveGameViewModel::UpdateForCurrentSaveGame(const FCurrentSaveGame& CurrentSaveGame)
 {
 	UE_MVVM_SET_PROPERTY_VALUE(bCanContinue, (CurrentSaveGame.IsValid() && !CurrentSaveGame.IsNewGame()));
 }
 
-void UCurrentSaveGame_VM::EndUsage()
+void UCurrentSaveGameViewModel::EndUsage()
 {
 	if (USaveGameService* SaveGameService = FindOptionalGameService<USaveGameService>().Get())
 	{

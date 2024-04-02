@@ -156,6 +156,7 @@ bool UModularSaveGameSerializer::TrySerializeSaveGame(USaveGame& InSaveGameObjec
 {
 	const UModularSaveGame* ModularSaveGame = Cast<UModularSaveGame>(&InSaveGameObject);
 	FMemoryWriter MemoryWriter(OutSaveData, true);
+	MemoryWriter.ArIsSaveGame = true;
 
 	// Serialize header data:
 	const FInstancedStruct CustomHeaderData = (ModularSaveGame && ModularSaveGame->GetInstancedHeaderData().IsValid())
@@ -179,6 +180,7 @@ bool UModularSaveGameSerializer::TryDeserializeSaveGame(const TArray<uint8>& InS
 		return false;
 
 	FMemoryReader MemoryReader(InSaveData, true);
+	MemoryReader.ArIsSaveGame = true;
 
 	// Restore header data:
 	FModularSaveGameHeader SaveHeader;

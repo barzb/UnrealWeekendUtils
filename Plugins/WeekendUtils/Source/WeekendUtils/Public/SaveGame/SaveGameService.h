@@ -19,6 +19,7 @@
 class USaveGame;
 class USaveGameDataProcessor;
 class USaveGameSerializer;
+class USaveGameServiceSettings;
 class USaveLoadBehavior;
 
 using FAsyncSaveGameHandle = FGuid;
@@ -53,6 +54,7 @@ public:
 		Lifetime = EGameServiceLifetime::ShutdownWithGameInstance;
 	}
 
+	using FDebugContext = FString;
 	using FSlotName = FString;
 	enum class EStatus : uint8
 	{
@@ -83,23 +85,23 @@ public:
 	/// REQUESTS
 
 	/** Asynchronously save the current state of the game into the Autosave file slot. */
-	FAsyncSaveGameHandle RequestAutosave();
-	FAsyncSaveGameHandle RequestAutosave(const FOnSaveLoadCompleted& Callback);
+	FAsyncSaveGameHandle RequestAutosave(const FDebugContext& Context);
+	FAsyncSaveGameHandle RequestAutosave(const FDebugContext& Context, const FOnSaveLoadCompleted& Callback);
 
 	/** Asynchronously save the current state of the game into the given SaveGame file slot. */
-	FAsyncSaveGameHandle RequestSaveCurrentSaveGameToSlot(const FSlotName& SlotName);
-	FAsyncSaveGameHandle RequestSaveCurrentSaveGameToSlot(const FSlotName& SlotName, const FOnSaveLoadCompleted& Callback);
+	FAsyncSaveGameHandle RequestSaveCurrentSaveGameToSlot(const FDebugContext& Context, const FSlotName& SlotName);
+	FAsyncSaveGameHandle RequestSaveCurrentSaveGameToSlot(const FDebugContext& Context, const FSlotName& SlotName, const FOnSaveLoadCompleted& Callback);
 
 	/** Asynchronously load and restore a SaveGame file as current SaveGame from given slot. */
-	FAsyncLoadGameHandle RequestLoadCurrentSaveGameFromSlot(const FSlotName& SlotName);
-	FAsyncLoadGameHandle RequestLoadCurrentSaveGameFromSlot(const FSlotName& SlotName, const FOnSaveLoadCompleted& Callback);
+	FAsyncLoadGameHandle RequestLoadCurrentSaveGameFromSlot(const FDebugContext& Context, const FSlotName& SlotName);
+	FAsyncLoadGameHandle RequestLoadCurrentSaveGameFromSlot(const FDebugContext& Context, const FSlotName& SlotName, const FOnSaveLoadCompleted& Callback);
 
 	/**
 	 * Asynchronously load and restore a SaveGame file as current SaveGame from given slot.
 	 * Afterwards, travel into the level stored in the SaveGame. The CurrentSaveGame will persist even after travelling.
 	 */
-	FAsyncLoadGameHandle RequestLoadAndTravelIntoCurrentSaveGameFromSlot(const FSlotName& SlotName);
-	FAsyncLoadGameHandle RequestLoadAndTravelIntoCurrentSaveGameFromSlot(const FSlotName& SlotName, const FOnSaveLoadCompleted& Callback);
+	FAsyncLoadGameHandle RequestLoadAndTravelIntoCurrentSaveGameFromSlot(const FDebugContext& Context, const FSlotName& SlotName);
+	FAsyncLoadGameHandle RequestLoadAndTravelIntoCurrentSaveGameFromSlot(const FDebugContext& Context, const FSlotName& SlotName, const FOnSaveLoadCompleted& Callback);
 
 	/** @returns whether a given save request handle is still active (pending or being processed). */
 	bool IsSaveRequestAlive(const FAsyncSaveGameHandle& Handle) const;
@@ -141,14 +143,14 @@ public:
 	///////////////////////////////////////////////////////////////////////////////////////
 	/// LOCKS
 
-	virtual FSaveLoadLockHandle LockAutosaving(const UObject& KeyHolder);
-	virtual void UnlockAutosaving(const FSaveLoadLockHandle& Key);
+	virtual FSaveLoadLockHandle LockAutosaving(const UObject& KeyHolder, const FDebugContext& Context = "");
+	virtual void UnlockAutosaving(const FSaveLoadLockHandle& Key, const FDebugContext& Context = "");
 
-	virtual FSaveLoadLockHandle LockSaving(const UObject& KeyHolder);
-	virtual void UnlockSaving(const FSaveLoadLockHandle& Key);
+	virtual FSaveLoadLockHandle LockSaving(const UObject& KeyHolder, const FDebugContext& Context = "");
+	virtual void UnlockSaving(const FSaveLoadLockHandle& Key, const FDebugContext& Context = "");
 
-	virtual FSaveLoadLockHandle LockLoading(const UObject& KeyHolder);
-	virtual void UnlockLoading(const FSaveLoadLockHandle& Key);
+	virtual FSaveLoadLockHandle LockLoading(const UObject& KeyHolder, const FDebugContext& Context = "");
+	virtual void UnlockLoading(const FSaveLoadLockHandle& Key, const FDebugContext& Context = "");
 
 	///////////////////////////////////////////////////////////////////////////////////////
 	/// COMPOSITE SUBOBJECTS
@@ -165,6 +167,7 @@ public:
 	FORCEINLINE const FCurrentSaveGame& GetCurrentSaveGame() const { return CurrentSaveGame; }
 	FORCEINLINE virtual uint32 GetCurrentUserIndex() const { return 0; }
 	FORCEINLINE EStatus GetCurrentStatus() const { return CurrentStatus; }
+	FORCEINLINE TArray<FString> GetDebugHistory() const { return DebugHistory; }
 
 	virtual bool IsAutosavingAllowed() const;
 	virtual bool IsSavingAllowed() const;
@@ -200,46 +203,59 @@ protected:
 	EStatus CurrentStatus = EStatus::Uninitialized;
 
 	///////////////////////////////////////////////////////////////////////////////////////
+	/// HISTORY
+
+	uint8 DebugHistoryEntriesToKeep = 0;
+	TArray<FString> DebugHistory = {};
+
+	///////////////////////////////////////////////////////////////////////////////////////
 	/// REQUESTS
 
 	class ISaveLoadRequest : public TSharedFromThis<ISaveLoadRequest>
 	{
 	public:
-		virtual void Process() {};
+		virtual void Process();
 		virtual void Finish(USaveGame* RequestedSaveGame, bool bSuccess);
 		virtual void Cancel() {}
 
 		USaveGameService& Service;
 		FGuid Handle = FGuid::NewGuid();
 		TOptional<FOnSaveLoadCompleted> RequestCallback = {};
+		FDebugContext Context = FDebugContext();
+		double StartTime = 0.0;
+		double Runtime = 0.0;
 
 	protected:
 		virtual ~ISaveLoadRequest() = default;
-		explicit ISaveLoadRequest(USaveGameService& InService) : Service(InService) {}
-		explicit ISaveLoadRequest(USaveGameService& InService, const FOnSaveLoadCompleted& Callback) : Service(InService), RequestCallback(Callback) {}
+		explicit ISaveLoadRequest(USaveGameService& InService, const FDebugContext& InContext) : Service(InService), Context(InContext) { }
+		explicit ISaveLoadRequest(USaveGameService& InService, const FDebugContext& InContext, const FOnSaveLoadCompleted& Callback) :
+			Service(InService), RequestCallback(Callback), Context(InContext) { }
 	};
 
 	class FLoadToCurrentSaveGameRequest : public ISaveLoadRequest
 	{
 	public:
-		explicit FLoadToCurrentSaveGameRequest(USaveGameService& InService) : ISaveLoadRequest(InService) {}
-		explicit FLoadToCurrentSaveGameRequest(USaveGameService& InService, const FOnSaveLoadCompleted& Callback) : ISaveLoadRequest(InService, Callback) {}
+		explicit FLoadToCurrentSaveGameRequest(USaveGameService& InService, const FDebugContext& InContext) : ISaveLoadRequest(InService, InContext) {}
+		explicit FLoadToCurrentSaveGameRequest(USaveGameService& InService, const FDebugContext& InContext, const FOnSaveLoadCompleted& Callback) :
+			ISaveLoadRequest(InService, InContext, Callback) {}
 		virtual void Finish(USaveGame* RequestedSaveGame, bool bSuccess) override;
 	};
 
 	class FLoadAndTravelIntoToCurrentSaveGameRequest : public ISaveLoadRequest
 	{
 	public:
-		explicit FLoadAndTravelIntoToCurrentSaveGameRequest(USaveGameService& InService) : ISaveLoadRequest(InService) {}
-		explicit FLoadAndTravelIntoToCurrentSaveGameRequest(USaveGameService& InService, const FOnSaveLoadCompleted& Callback) : ISaveLoadRequest(InService, Callback) {}
+		explicit FLoadAndTravelIntoToCurrentSaveGameRequest(USaveGameService& InService, const FDebugContext& InContext) : ISaveLoadRequest(InService, InContext) {}
+		explicit FLoadAndTravelIntoToCurrentSaveGameRequest(USaveGameService& InService, const FDebugContext& InContext, const FOnSaveLoadCompleted& Callback) :
+			ISaveLoadRequest(InService, InContext, Callback) {}
 		virtual void Finish(USaveGame* RequestedSaveGame, bool bSuccess) override;
 	};
 
 	class FSaveCurrentSaveGameRequest : public ISaveLoadRequest
 	{
 	public:
-		explicit FSaveCurrentSaveGameRequest(USaveGameService& InService) : ISaveLoadRequest(InService) {}
-		explicit FSaveCurrentSaveGameRequest(USaveGameService& InService, const FOnSaveLoadCompleted& Callback) : ISaveLoadRequest(InService, Callback) {}
+		explicit FSaveCurrentSaveGameRequest(USaveGameService& InService, const FDebugContext& InContext) : ISaveLoadRequest(InService, InContext) {}
+		explicit FSaveCurrentSaveGameRequest(USaveGameService& InService, const FDebugContext& InContext, const FOnSaveLoadCompleted& Callback) :
+			ISaveLoadRequest(InService, InContext, Callback) {}
 	};
 
 	TMap<FSlotName, TArray<TSharedRef<ISaveLoadRequest>>> PendingSaveRequestsBySlot = {};
@@ -282,7 +298,7 @@ protected:
 	///////////////////////////////////////////////////////////////////////////////////////
 	/// SAVE & LOAD
 
-	virtual USaveLoadBehavior& CreateSaveLoadBehavior();
+	virtual USaveLoadBehavior& CreateSaveLoadBehavior(const USaveGameServiceSettings& Settings);
 	virtual USaveGameSerializer& CreateSaveGameSerializer();
 
 	virtual void PerformAsyncSave(const FSlotName& SlotName);
@@ -299,6 +315,9 @@ protected:
 	virtual void UpdateSaveLockForLevel(UWorld* NewWorld);
 
 	virtual void SetStatus(const EStatus& NewStatus);
+	virtual void AddDebugEntry(const FString& Entry);
+	virtual void AddDebugEntry(const FString& Operation, const FDebugContext& Context);
+	virtual void AddDebugEntry(const FString& Operation, const FDebugContext& Context, bool bSuccess, double ExecTime);
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////

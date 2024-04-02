@@ -22,7 +22,7 @@ DEFINE_CHEAT_COLLECTION(WeekendSaveGameCheats, AsCheatMenuTab("Save Game"))
 		if (LogInvalidity(SaveGameService, "SaveGameService not available"))
 			return;
 
-		SaveGameService->RequestAutosave();
+		SaveGameService->RequestAutosave("Cheat.SaveGame.Autosave");
 	}
 
 	DEFINE_CHEAT_COMMAND(LoadAutosaveCheat, "Cheat.SaveGame.LoadAutosave")
@@ -33,7 +33,7 @@ DEFINE_CHEAT_COLLECTION(WeekendSaveGameCheats, AsCheatMenuTab("Save Game"))
 		if (LogInvalidity(SaveGameService, "SaveGameService not available"))
 			return;
 
-		SaveGameService->RequestLoadCurrentSaveGameFromSlot(SaveGameService->GetAutosaveSlotName());
+		SaveGameService->RequestLoadCurrentSaveGameFromSlot("Cheat.SaveGame.LoadAutosave", SaveGameService->GetAutosaveSlotName());
 	}
 
 #if WITH_EDITOR

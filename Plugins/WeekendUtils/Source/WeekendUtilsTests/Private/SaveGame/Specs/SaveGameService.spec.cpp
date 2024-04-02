@@ -53,7 +53,7 @@ WE_END_DEFINE_SPEC(SaveGameService)
 			const FString AutosaveSlotName = SaveGameService->GetAutosaveSlotName();
 			TestFalse("Autosave file exists before autosaving", SaveGameSerializer->DoesSaveGameExist(AutosaveSlotName, UserIndex));
 
-			SaveGameService->RequestAutosave();
+			SaveGameService->RequestAutosave("Test");
 			TestTrue("Autosave file exists after autosaving", SaveGameSerializer->DoesSaveGameExist(AutosaveSlotName, UserIndex));
 		});
 
@@ -64,7 +64,7 @@ WE_END_DEFINE_SPEC(SaveGameService)
 
 			USaveGame* SaveGamePassedByCallback = nullptr;
 			TSharedRef<bool> bWasCallbackCalledWithSuccess = MakeShared<bool>(false);
-			SaveGameService->RequestAutosave(FOnSaveLoadCompleted::CreateLambda([&](USaveGame* SavedGame, bool bSuccess)
+			SaveGameService->RequestAutosave("Test", FOnSaveLoadCompleted::CreateLambda([&](USaveGame* SavedGame, bool bSuccess)
 			{
 				SaveGamePassedByCallback = SavedGame;
 				*bWasCallbackCalledWithSuccess = bSuccess;
@@ -84,7 +84,7 @@ WE_END_DEFINE_SPEC(SaveGameService)
 
 			TestFalse("Save file exists before saving", SaveGameSerializer->DoesSaveGameExist(TestSlotName, UserIndex));
 
-			SaveGameService->RequestSaveCurrentSaveGameToSlot(TestSlotName);
+			SaveGameService->RequestSaveCurrentSaveGameToSlot("Test", TestSlotName);
 			TestTrue("Save file exists after saving", SaveGameSerializer->DoesSaveGameExist(TestSlotName, UserIndex));
 		});
 
@@ -95,7 +95,7 @@ WE_END_DEFINE_SPEC(SaveGameService)
 
 			USaveGame* SaveGamePassedByCallback = nullptr;
 			TSharedRef<bool> bWasCallbackCalledWithSuccess = MakeShared<bool>(false);
-			SaveGameService->RequestSaveCurrentSaveGameToSlot(TestSlotName, FOnSaveLoadCompleted::CreateLambda([&](USaveGame* SavedGame, bool bSuccess)
+			SaveGameService->RequestSaveCurrentSaveGameToSlot("Test", TestSlotName, FOnSaveLoadCompleted::CreateLambda([&](USaveGame* SavedGame, bool bSuccess)
 			{
 				SaveGamePassedByCallback = SavedGame;
 				*bWasCallbackCalledWithSuccess = bSuccess;
@@ -110,7 +110,7 @@ WE_END_DEFINE_SPEC(SaveGameService)
 			if (!TestNotNull("MockSaveGameSerializer", SaveGameSerializer.Get()))
 				return;
 
-			SaveGameService->RequestSaveCurrentSaveGameToSlot(TestSlotName);
+			SaveGameService->RequestSaveCurrentSaveGameToSlot("Test", TestSlotName);
 
 			const USaveGame* CachedSaveGame = SaveGameService->GetCachedSaveGameAtSlot(TestSlotName);
 			TestNotNull("CachedSaveGame", CachedSaveGame);

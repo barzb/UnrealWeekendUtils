@@ -7,34 +7,34 @@
 ///
 ///////////////////////////////////////////////////////////////////////////////////////
 
-#include "SaveGame/ViewModels/SaveLoadMarker_VM.h"
+#include "SaveGame/ViewModels/SaveLoadMarkerViewModel.h"
 
 #include "SaveGame/SaveGameService.h"
 
-USaveLoadMarker_VM::USaveLoadMarker_VM()
+USaveLoadMarkerViewModel::USaveLoadMarkerViewModel()
 {
 	ServiceDependencies.Add<USaveGameService>();
 }
 
-FTimespan USaveLoadMarker_VM::GetTimeSinceLastSave() const
+FTimespan USaveLoadMarkerViewModel::GetTimeSinceLastSave() const
 {
 	return (FDateTime::UtcNow() - UtcTimeOfLastSave);
 }
 
-bool USaveLoadMarker_VM::ShouldShowTimeSinceLastSave() const
+bool USaveLoadMarkerViewModel::ShouldShowTimeSinceLastSave() const
 {
 	return SaveGameService.IsValid()
 		&& SaveGameService->GetCurrentSaveGame().GetUtcTimeOfLastSave().IsSet();
 }
 
-void USaveLoadMarker_VM::BeginUsage()
+void USaveLoadMarkerViewModel::BeginUsage()
 {
 	SaveGameService = UseGameServiceAsWeakPtr<USaveGameService>(this);
 	SaveGameService->OnStatusChanged.AddUObject(this, &ThisClass::UpdateForStatus);
 	UpdateForStatus(SaveGameService->GetCurrentStatus());
 }
 
-void USaveLoadMarker_VM::EndUsage()
+void USaveLoadMarkerViewModel::EndUsage()
 {
 	if (SaveGameService.IsValid())
 	{
@@ -49,14 +49,14 @@ void USaveLoadMarker_VM::EndUsage()
 	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(ShouldShowTimeSinceLastSave);
 }
 
-void USaveLoadMarker_VM::BeginDestroy()
+void USaveLoadMarkerViewModel::BeginDestroy()
 {
 	EndUsage();
 
 	Super::BeginDestroy();
 }
 
-void USaveLoadMarker_VM::UpdateForStatus(USaveGameService::EStatus NewStatus)
+void USaveLoadMarkerViewModel::UpdateForStatus(USaveGameService::EStatus NewStatus)
 {
 	switch (NewStatus)
 	{

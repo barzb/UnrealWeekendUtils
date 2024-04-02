@@ -13,7 +13,7 @@
 #include "MVVMViewModelBase.h"
 #include "GameService/GameServiceUser.h"
 
-#include "CurrentSaveGame_VM.generated.h"
+#include "CurrentSaveGameViewModel.generated.h"
 
 struct FCurrentSaveGame;
 
@@ -21,13 +21,13 @@ struct FCurrentSaveGame;
  * ViewModel that represents the currently loaded SaveGame slot.
  */
 UCLASS()
-class WEEKENDUTILS_API UCurrentSaveGame_VM : public UMVVMViewModelBase,
-											 public FGameServiceUser
+class WEEKENDUTILS_API UCurrentSaveGameViewModel : public UMVVMViewModelBase,
+												   public FGameServiceUser
 {
 	GENERATED_BODY()
 
 public:
-	UCurrentSaveGame_VM();
+	UCurrentSaveGameViewModel();
 
 	UPROPERTY(FieldNotify, BlueprintReadOnly)
 	bool bCanContinue = false;

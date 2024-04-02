@@ -55,6 +55,10 @@ public:
 	UPROPERTY(Config, EditDefaultsOnly, Category = "Save Load Behavior", meta = (EditCondition = "!bAlwaysAllowSaving", MetaClass = "/Script/Engine.GameModeBase"))
 	TSet<FSoftClassPath> GameModesWhereSavingIsAllowed = {};
 
+	/** How many save/load events to keep in the debug history of the SaveGameService. History may be saved into the save game. */
+	UPROPERTY(Config, EditDefaultsOnly, Category = "Save Load Behavior", AdvancedDisplay)
+	uint8 DebugHistoryEntriesToKeep = 16;
+
 	/** Name of the SaveGame slot to save to while playing in editor (see @UDefaultPlayInEditorSaveLoadBehavior). */
 	UPROPERTY(Config, EditAnywhere, Category = "Play In Editor")
 	FString DefaultPlayInEditorSaveGameSlotName = "PlayInEditor";

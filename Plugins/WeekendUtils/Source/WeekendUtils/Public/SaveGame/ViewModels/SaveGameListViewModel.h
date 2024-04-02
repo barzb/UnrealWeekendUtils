@@ -13,22 +13,22 @@
 #include "MVVMViewModelBase.h"
 #include "GameService/GameServiceUser.h"
 
-#include "SaveGameList_VM.generated.h"
+#include "SaveGameListViewModel.generated.h"
 
 class USaveGamePreset;
 class USaveLoadBehavior;
 class USaveGameService;
-class USaveGameSlot_VM;
+class USaveGameSlotViewModel;
 
 ///////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Base class of a ViewModel that lists available SaveGame slots.
- * Works in accord with @USaveGameSlot_VM.
+ * Works in accord with @USaveGameSlotViewModel.
  */
 UCLASS(Abstract)
-class WEEKENDUTILS_API USaveGameList_VM : public UMVVMViewModelBase,
-										  public FGameServiceUser
+class WEEKENDUTILS_API USaveGameListViewModel : public UMVVMViewModelBase,
+												public FGameServiceUser
 {
 	GENERATED_BODY()
 
@@ -36,19 +36,19 @@ public:
 	using FSlotName = FString;
 
 	UPROPERTY(FieldNotify, BlueprintReadOnly)
-	TArray<TObjectPtr<USaveGameSlot_VM>> Slots = {};
+	TArray<TObjectPtr<USaveGameSlotViewModel>> Slots = {};
 
-	USaveGameList_VM();
+	USaveGameListViewModel();
 
 	UFUNCTION(BlueprintCallable)
-	virtual void BeginUsage(TSubclassOf<USaveGameSlot_VM> SlotClass);
+	virtual void BeginUsage(TSubclassOf<USaveGameSlotViewModel> SlotClass);
 
 	UFUNCTION(BlueprintCallable)
 	virtual void EndUsage();
 
 protected:
 	UPROPERTY()
-	TSubclassOf<USaveGameSlot_VM> SlotViewModelClass = nullptr;
+	TSubclassOf<USaveGameSlotViewModel> SlotViewModelClass = nullptr;
 	TWeakObjectPtr<USaveGameService> SaveGameService = nullptr;
 
 	// - UObject
@@ -67,12 +67,12 @@ protected:
 
 /** ViewModel implementation that lists SaveGame slots available for saving. */
 UCLASS()
-class WEEKENDUTILS_API USaveGameSaveList_VM : public USaveGameList_VM
+class WEEKENDUTILS_API USaveGameSaveListViewModel : public USaveGameListViewModel
 {
 	GENERATED_BODY()
 
 protected:
-	// - USaveGameList_VM
+	// - USaveGameListViewModel
 	virtual TArray<FSlotName> GatherRelevantSlotNames() override;
 	virtual bool AllowsSavingFromWidget() const override { return true; }
 	virtual bool HandleSaveRequestBySlot(const FSlotName& SlotName) override;
@@ -83,12 +83,12 @@ protected:
 
 /** ViewModel implementation that lists SaveGame slots available for loading. */
 UCLASS()
-class WEEKENDUTILS_API USaveGameLoadList_VM : public USaveGameList_VM
+class WEEKENDUTILS_API USaveGameLoadListViewModel : public USaveGameListViewModel
 {
 	GENERATED_BODY()
 
 protected:
-	// - USaveGameList_VM
+	// - USaveGameListViewModel
 	virtual TArray<FSlotName> GatherRelevantSlotNames() override;
 	virtual bool AllowsLoadingFromWidget() const override { return true; }
 	virtual bool HandleLoadRequestBySlot(const FSlotName& SlotName) override;
@@ -99,7 +99,7 @@ protected:
 
 /** ViewModel implementation that lists SaveGame presets available for loading. */
 UCLASS()
-class WEEKENDUTILS_API USaveGamePresetList_VM : public USaveGameList_VM
+class WEEKENDUTILS_API USaveGamePresetListViewModel : public USaveGameListViewModel
 {
 	GENERATED_BODY()
 
@@ -107,7 +107,7 @@ protected:
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<const USaveGamePreset>> AvailablePresets = {};
 
-	// - USaveGameList_VM
+	// - USaveGameListViewModel
 	virtual void Update() override;
 	virtual TArray<FSlotName> GatherRelevantSlotNames() override;
 	virtual bool AllowsLoadingFromWidget() const override { return true; }

@@ -328,7 +328,7 @@ void SCheatMenu::CollectCheats()
 	SectionNamesInTabNames.Empty();
 
 	// Collect anew:
-	for (const Cheats::FCheatCommandCollection* Collection : Cheats::FCheatCommandCollection::AllCollections)
+	for (const Cheats::FCheatCommandCollection* Collection : Cheats::GetAllCollections())
 	{
 		if (!Collection->ShowInCheatMenu())
 			continue;

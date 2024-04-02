@@ -7,21 +7,22 @@
 ///
 ///////////////////////////////////////////////////////////////////////////////////////
 
-#include "SaveGame/ViewModels/SaveGameList_VM.h"
+#include "SaveGame/ViewModels/SaveGameListViewModel.h"
 
 #include "SaveGame/SaveGamePreset.h"
 #include "SaveGame/SaveGameService.h"
-#include "SaveGame/ViewModels/SaveGameSlot_VM.h"
+#include "SaveGame/ViewModels/SaveGameSlotViewModel.h"
 #include "Utils/ObjectListSynchronizer.h"
 
-USaveGameList_VM::USaveGameList_VM()
+USaveGameListViewModel::USaveGameListViewModel()
 {
 	ServiceDependencies.Add<USaveGameService>();
 }
 
-void USaveGameList_VM::BeginUsage(TSubclassOf<USaveGameSlot_VM> SlotClass)
+void USaveGameListViewModel::BeginUsage(TSubclassOf<USaveGameSlotViewModel> SlotClass)
 {
 	SlotViewModelClass = SlotClass;
+	check(SlotViewModelClass);
 
 	SaveGameService = UseGameServiceAsWeakPtr<USaveGameService>(this);
 	SaveGameService->OnAvailableSaveGamesChanged.AddUObject(this, &ThisClass::Update);
@@ -29,25 +30,25 @@ void USaveGameList_VM::BeginUsage(TSubclassOf<USaveGameSlot_VM> SlotClass)
 	Update();
 }
 
-void USaveGameList_VM::Update()
+void USaveGameListViewModel::Update()
 {
 	const TArray<FSlotName> SlotsNames = GatherRelevantSlotNames();
 	const bool bCanSave = AllowsSavingFromWidget();
 	const bool bCanLoad = AllowsLoadingFromWidget();
 
 	TObjectListSynchronizer(Slots, SlotsNames)
-	.ForEachMissingElement([this, bCanSave, bCanLoad](const FSlotName& SlotName) -> USaveGameSlot_VM* {
-		USaveGameSlot_VM* NewViewModel = NewObject<USaveGameSlot_VM>(this, SlotViewModelClass);
+	.ForEachMissingElement([this, bCanSave, bCanLoad](const FSlotName& SlotName) -> USaveGameSlotViewModel* {
+		USaveGameSlotViewModel* NewViewModel = NewObject<USaveGameSlotViewModel>(this, SlotViewModelClass);
 		NewViewModel->OnSaveRequested.BindUObject(this, &ThisClass::HandleSaveRequestBySlot);
 		NewViewModel->OnLoadRequested.BindUObject(this, &ThisClass::HandleLoadRequestBySlot);
 		NewViewModel->BindToModel(SlotName, *SaveGameService, bCanSave, bCanLoad);
 		return NewViewModel;
 	})
-	.ForEachUpdatedElement([this, bCanSave, bCanLoad](USaveGameSlot_VM& ViewModel, const FSlotName& SlotName)
+	.ForEachUpdatedElement([this, bCanSave, bCanLoad](USaveGameSlotViewModel& ViewModel, const FSlotName& SlotName)
 	{
 		ViewModel.BindToModel(SlotName, *SaveGameService, bCanSave, bCanLoad);
 	})
-	.ForEachRemovedElement([this](USaveGameSlot_VM& ViewModel)
+	.ForEachRemovedElement([this](USaveGameSlotViewModel& ViewModel)
 	{
 		ViewModel.OnSaveRequested.Unbind();
 		ViewModel.OnLoadRequested.Unbind();
@@ -57,7 +58,7 @@ void USaveGameList_VM::Update()
 	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(Slots);
 }
 
-void USaveGameList_VM::EndUsage()
+void USaveGameListViewModel::EndUsage()
 {
 	Slots.Reset();
 
@@ -68,7 +69,7 @@ void USaveGameList_VM::EndUsage()
 	}
 }
 
-void USaveGameList_VM::BeginDestroy()
+void USaveGameListViewModel::BeginDestroy()
 {
 	EndUsage();
 
@@ -77,7 +78,7 @@ void USaveGameList_VM::BeginDestroy()
 
 ///////////////////////////////////////////////////////////////////////////////////////
 
-TArray<USaveGameList_VM::FSlotName> USaveGameSaveList_VM::GatherRelevantSlotNames()
+TArray<USaveGameListViewModel::FSlotName> USaveGameSaveListViewModel::GatherRelevantSlotNames()
 {
 	if (!SaveGameService.IsValid())
 		return {};
@@ -85,18 +86,18 @@ TArray<USaveGameList_VM::FSlotName> USaveGameSaveList_VM::GatherRelevantSlotName
 	return SaveGameService->GetSlotNamesAllowedForSaving().Array();
 }
 
-bool USaveGameSaveList_VM::HandleSaveRequestBySlot(const FSlotName& SlotName)
+bool USaveGameSaveListViewModel::HandleSaveRequestBySlot(const FSlotName& SlotName)
 {
 	if (!SaveGameService.IsValid())
 		return false;
 
-	SaveGameService->RequestSaveCurrentSaveGameToSlot(SlotName);
+	SaveGameService->RequestSaveCurrentSaveGameToSlot("SaveList Entry (USaveGameSaveListViewModel)", SlotName);
 	return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
 
-TArray<USaveGameList_VM::FSlotName> USaveGameLoadList_VM::GatherRelevantSlotNames()
+TArray<USaveGameListViewModel::FSlotName> USaveGameLoadListViewModel::GatherRelevantSlotNames()
 {
 	if (!SaveGameService.IsValid())
 		return {};
@@ -104,32 +105,32 @@ TArray<USaveGameList_VM::FSlotName> USaveGameLoadList_VM::GatherRelevantSlotName
 	return SaveGameService->GetSlotNamesAllowedForLoading().Array();
 }
 
-bool USaveGameLoadList_VM::HandleLoadRequestBySlot(const FSlotName& SlotName)
+bool USaveGameLoadListViewModel::HandleLoadRequestBySlot(const FSlotName& SlotName)
 {
 	if (!SaveGameService.IsValid())
 		return false;
 
-	SaveGameService->RequestLoadAndTravelIntoCurrentSaveGameFromSlot(SlotName);
+	SaveGameService->RequestLoadAndTravelIntoCurrentSaveGameFromSlot("LoadList Entry (USaveGameLoadListViewModel)", SlotName);
 	return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
 
-void USaveGamePresetList_VM::Update()
+void USaveGamePresetListViewModel::Update()
 {
 	AvailablePresets = USaveGamePreset::CollectSaveGamePresets().Array();
 
 	Super::Update();
 }
 
-TArray<USaveGameList_VM::FSlotName> USaveGamePresetList_VM::GatherRelevantSlotNames()
+TArray<USaveGameListViewModel::FSlotName> USaveGamePresetListViewModel::GatherRelevantSlotNames()
 {
 	TArray<FSlotName> SlotNames = {};
 	Algo::Transform(AvailablePresets, OUT SlotNames, &USaveGamePreset::PresetName);
 	return SlotNames;
 }
 
-bool USaveGamePresetList_VM::HandleLoadRequestBySlot(const FSlotName& SlotName)
+bool USaveGamePresetListViewModel::HandleLoadRequestBySlot(const FSlotName& SlotName)
 {
 	if (!SaveGameService.IsValid())
 		return false;

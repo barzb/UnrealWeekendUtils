@@ -74,11 +74,11 @@ public:
 	// --
 
 protected:
-	UPROPERTY(Transient, VisibleAnywhere)
+	UPROPERTY(Transient, VisibleAnywhere, meta = (DisplayThumbnail = "false"))
 	TSet<TWeakObjectPtr<UObject>> SimpleRegisteredObjects = {};
-	UPROPERTY(Transient, VisibleAnywhere)
+	UPROPERTY(Transient, VisibleAnywhere, meta = (DisplayThumbnail = "false"))
 	TSet<TWeakObjectPtr<UObject>> RegisteredObjectsWithTransform = {};
-	UPROPERTY(Transient, VisibleAnywhere)
+	UPROPERTY(Transient, VisibleAnywhere, meta = (DisplayThumbnail = "false"))
 	TMap<TWeakObjectPtr<UObject>, FString> UniqueIdsOfRegisteredObjects = {};
 
 	UPROPERTY(SaveGame, VisibleAnywhere)

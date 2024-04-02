@@ -17,6 +17,7 @@
 #include "SaveGame/SaveGameService.h"
 #include "SaveGame/SaveGameUtils.h"
 #include "SaveGame/Settings/SaveGameServiceSettings.h"
+#include "SaveGame/Modules/SaveGameModule_SaveLoadDebugHistory.h"
 
 DEFINE_LOG_CATEGORY(LogSaveLoadBehavior);
 
@@ -68,7 +69,10 @@ void USaveLoadBehavior::HandleAfterSaveGameRestored(const FCurrentSaveGame& Save
 
 USaveGame& USaveLoadBehavior::CreateNewSavegameObject(USaveGameService& SaveGameService) const
 {
-	return *NewObject<UModularSaveGame>(&SaveGameService);
+	UModularSaveGame* ModularSaveGame = NewObject<UModularSaveGame>(&SaveGameService);
+	auto& Module = ModularSaveGame->FindOrAddModule<USaveGameModule_SaveLoadDebugHistory>();
+	Module.SaveGameService = &SaveGameService;
+	return *ModularSaveGame;
 }
 
 TSubclassOf<USaveGameSerializer> USaveLoadBehavior::GetSaveGameSerializerClass() const

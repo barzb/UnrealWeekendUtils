@@ -13,22 +13,26 @@
 
 namespace Cheats
 {
-	TArray<FCheatCommandCollection*> FCheatCommandCollection::AllCollections;
-
 	FCheatCommandCollection::FCheatCommandCollection()
 	{
-		AllCollections.AddUnique(this);
+		GetAllCollections().AddUnique(this);
 	}
 
 	FCheatCommandCollection::FCheatCommandCollection(const FCheatMenuCategorySettings& InCheatMenuSettings) :
 		CheatMenuSettings(InCheatMenuSettings)
 	{
-		AllCollections.AddUnique(this);
+		GetAllCollections().AddUnique(this);
 	}
 
 	void FCheatCommandCollection::AddCheat(ICheatCommand* CheatCommand)
 	{
 		RegisteredCheatCommands.AddUnique(CheatCommand);
+	}
+
+	TArray<FCheatCommandCollection*>& GetAllCollections()
+	{
+		static TArray<FCheatCommandCollection*> Collections = {};
+		return Collections;
 	}
 }
 
@@ -42,7 +46,7 @@ DEFINE_CHEAT_COLLECTION(CheatCollectionCheats)
 	{
 		TArray<FString> Lines;
 		Lines.Add("Cheat;Command;Arguments;Description"); // Header row.
-		for (const FCheatCommandCollection* CheatCollection : FCheatCommandCollection::AllCollections)
+		for (const FCheatCommandCollection* CheatCollection : GetAllCollections())
 		{
 			for (const ICheatCommand* CheatCommand : CheatCollection->GetRegisteredCheatCommands())
 			{

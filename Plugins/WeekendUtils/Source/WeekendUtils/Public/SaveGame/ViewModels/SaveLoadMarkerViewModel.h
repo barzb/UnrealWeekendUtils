@@ -15,20 +15,20 @@
 #include "GameService/GameServiceUser.h"
 #include "SaveGame/SaveGameService.h"
 
-#include "SaveLoadMarker_VM.generated.h"
+#include "SaveLoadMarkerViewModel.generated.h"
 
 /**
  * View Model for a marker widget showing when the game is being saved or loaded.
  * @BeginUsage and @EndUsage must be called manually by the owning view.
  */
 UCLASS()
-class WEEKENDUTILS_API USaveLoadMarker_VM : public UMVVMViewModelBase,
-											public FGameServiceUser
+class WEEKENDUTILS_API USaveLoadMarkerViewModel : public UMVVMViewModelBase,
+												  public FGameServiceUser
 {
 	GENERATED_BODY()
 
 public:
-	USaveLoadMarker_VM();
+	USaveLoadMarkerViewModel();
 
 	UPROPERTY(FieldNotify, BlueprintReadOnly)
 	ESlateVisibility SuggestedWidgetVisibility = ESlateVisibility::Collapsed;

@@ -28,12 +28,12 @@ namespace Cheats
 		bool ShowInCheatMenu() const { return CheatMenuSettings.IsSet(); }
 		FCheatMenuCategorySettings GetCheatMenuSettings() const { return *CheatMenuSettings; }
 
-		static TArray<FCheatCommandCollection*> AllCollections;
-
 	private:
 		TOptional<FCheatMenuCategorySettings> CheatMenuSettings;
 		TArray<ICheatCommand*> RegisteredCheatCommands;
 	};
+
+	WEEKENDUTILS_API TArray<FCheatCommandCollection*>& GetAllCollections();
 
 	/** Utility for #DEFINE_CHEAT_COLLECTION macro. @see CheatCommand.h */
 	inline FCheatMenuCategorySettings AsCheatMenuTab(FName TabName) { return FCheatMenuCategorySettings().Tab(TabName); }
