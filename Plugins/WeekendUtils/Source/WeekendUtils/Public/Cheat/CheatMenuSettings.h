@@ -28,7 +28,8 @@ namespace Cheats::EVariableStyle
 		Number,
 		FloatNumber,
 		Text,
-		TrueFalse
+		TrueFalse,
+		DropdownText
 	};
 
 	static FString LexToString(const Type& VariableStyle)
@@ -39,6 +40,7 @@ namespace Cheats::EVariableStyle
 			case FloatNumber: return "Float Number";
 			case Text: return "Text";
 			case TrueFalse: return "True/False";
+			case DropdownText: return "Dropdown Text";
 			default: return "??";
 		}
 	}

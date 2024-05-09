@@ -12,7 +12,7 @@
 #include "CoreMinimal.h"
 #include "CheatMenuSettings.h"
 
-class ICheatCommand;
+class ICheatMenuAction;
 
 namespace Cheats
 {
@@ -22,15 +22,16 @@ namespace Cheats
 		FCheatCommandCollection();
 		FCheatCommandCollection(const FCheatMenuCategorySettings& InCheatMenuSettings);
 
-		void AddCheat(ICheatCommand* CheatCommand);
-		TArray<ICheatCommand*> GetRegisteredCheatCommands() const { return RegisteredCheatCommands; }
+		void AddCheat(ICheatMenuAction* CheatMenuAction);
+		void RemoveCheat(ICheatMenuAction* CheatMenuAction);
+		TArray<ICheatMenuAction*> GetRegisteredCheatMenuActions() const { return RegisteredCheatMenuActions; }
 
 		bool ShowInCheatMenu() const { return CheatMenuSettings.IsSet(); }
 		FCheatMenuCategorySettings GetCheatMenuSettings() const { return *CheatMenuSettings; }
 
 	private:
 		TOptional<FCheatMenuCategorySettings> CheatMenuSettings;
-		TArray<ICheatCommand*> RegisteredCheatCommands;
+		TArray<ICheatMenuAction*> RegisteredCheatMenuActions;
 	};
 
 	WEEKENDUTILS_API TArray<FCheatCommandCollection*>& GetAllCollections();

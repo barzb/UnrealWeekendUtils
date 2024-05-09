@@ -87,7 +87,7 @@ public:
 
 	virtual void Execute() override
 	{
-		OriginalCommand->Execute(OverrideArgs, GetWorld());
+		OriginalCommand->ExecuteWithArgs(OverrideArgs, GetWorld());
 	}
 
 protected:

@@ -37,7 +37,7 @@ const FText UCheatMenu::GetPaletteCategory()
 }
 #endif
 
-void UCheatMenu::HandleCheatExecuted(const ICheatCommand&, UWorld*, TArray<FString>)
+void UCheatMenu::HandleCheatExecuted(const ICheatMenuAction&, UWorld*, TArray<FString>)
 {
 	if (bShouldCloseAfterCheatExecution)
 	{

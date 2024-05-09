@@ -24,9 +24,14 @@ namespace Cheats
 		GetAllCollections().AddUnique(this);
 	}
 
-	void FCheatCommandCollection::AddCheat(ICheatCommand* CheatCommand)
+	void FCheatCommandCollection::AddCheat(ICheatMenuAction* CheatMenuAction)
 	{
-		RegisteredCheatCommands.AddUnique(CheatCommand);
+		RegisteredCheatMenuActions.AddUnique(CheatMenuAction);
+	}
+
+	void FCheatCommandCollection::RemoveCheat(ICheatMenuAction* CheatMenuAction)
+	{
+		RegisteredCheatMenuActions.Remove(CheatMenuAction);
 	}
 
 	TArray<FCheatCommandCollection*>& GetAllCollections()
@@ -48,14 +53,14 @@ DEFINE_CHEAT_COLLECTION(CheatCollectionCheats)
 		Lines.Add("Cheat;Command;Arguments;Description"); // Header row.
 		for (const FCheatCommandCollection* CheatCollection : GetAllCollections())
 		{
-			for (const ICheatCommand* CheatCommand : CheatCollection->GetRegisteredCheatCommands())
+			for (const ICheatMenuAction* CheatMenuAction : CheatCollection->GetRegisteredCheatMenuActions())
 			{
-				const FString Arguments = FString::JoinBy(CheatCommand->GetArgumentsInfo(), TEXT(", "), &FArgumentInfo::ToString);
+				const FString Arguments = FString::JoinBy(CheatMenuAction->GetArgumentsInfo(), TEXT(", "), &FArgumentInfo::ToString);
 				Lines.Add(FString::Printf(TEXT("\"%s\";\"%s\";\"%s\";\"%s\""),
-					*CheatCommand->GetDisplayName(),
-					*CheatCommand->GetCommandName(),
+					*CheatMenuAction->GetDisplayName(),
+					*CheatMenuAction->GetName(),
 					*Arguments,
-					*CheatCommand->GetCommandInfo()));
+					*CheatMenuAction->GetCommandInfo()));
 			}
 		}
 

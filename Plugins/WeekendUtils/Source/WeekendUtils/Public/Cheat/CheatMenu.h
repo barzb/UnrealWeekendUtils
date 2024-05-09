@@ -15,6 +15,8 @@
 
 #include "CheatMenu.generated.h"
 
+class ICheatMenuAction;
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCheatMenuCloseRequested);
 
 /**
@@ -56,5 +58,5 @@ protected:
 #endif
 	// --
 
-	void HandleCheatExecuted(const ICheatCommand& CheatCommand, UWorld* World, TArray<FString> Args);
+	void HandleCheatExecuted(const ICheatMenuAction& CheatMenuAction, UWorld* World, TArray<FString> Args);
 };

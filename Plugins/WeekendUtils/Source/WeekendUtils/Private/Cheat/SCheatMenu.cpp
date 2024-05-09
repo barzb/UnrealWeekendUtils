@@ -9,6 +9,7 @@
 
 #include "Cheat/SCheatMenu.h"
 
+#include "Cheat/CheatCommand.h"
 #include "Styling/StyleColors.h"
 #include "Widgets/Input/SEditableTextBox.h"
 #include "Widgets/Input/SNumericEntryBox.h"
@@ -246,10 +247,10 @@ void SCheatMenu::Construct(const FArguments& InArgs)
 	];
 }
 
-SCheatMenu::FEntry::FEntry(ICheatCommand* InCheatCommand, const FCheatMenuCategorySettings& InSettings) :
-	CheatCommand(InCheatCommand), Settings(InSettings)
+SCheatMenu::FEntry::FEntry(ICheatMenuAction* InCheatMenuAction, const FCheatMenuCategorySettings& InSettings) :
+	CheatMenuAction(InCheatMenuAction), Settings(InSettings)
 {
-	const int32 NumArgs = CheatCommand->GetArgumentsInfo().Num();
+	const int32 NumArgs = CheatMenuAction->GetArgumentsInfo().Num();
 	TArray<FString> ArgValues;
 
 	// Try to load arg values from config ini, if they have already been executed:
@@ -275,8 +276,8 @@ SCheatMenu::~SCheatMenu()
 {
 	for (const TSharedPtr<FEntry>& Entry : Entries)
 	{
-		Entry->CheatCommand->OnLogMessage.RemoveAll(this);
-		Entry->CheatCommand->OnAfterExecuted.RemoveAll(this);
+		Entry->CheatMenuAction->OnLogMessage.RemoveAll(this);
+		Entry->CheatMenuAction->OnAfterExecuted.RemoveAll(this);
 	}
 	Entries.Empty();
 	TabList.Reset();
@@ -293,18 +294,18 @@ TArray<FString> SCheatMenu::FEntry::GetArgs() const
 
 const FString& SCheatMenu::FEntry::GetCommandName() const
 {
-	return CheatCommand->GetCommandName();
+	return CheatMenuAction->GetName();
 }
 
 bool SCheatMenu::FEntry::MatchesFilterText(const FString& TextToFilter) const
 {
-	return CheatCommand->GetCommandName().Contains(TextToFilter)
-		|| CheatCommand->GetDisplayName().Contains(TextToFilter);
+	return CheatMenuAction->GetName().Contains(TextToFilter)
+		|| CheatMenuAction->GetDisplayName().Contains(TextToFilter);
 }
 
-void SCheatMenu::FEntry::ExecuteCheatCommand()
+void SCheatMenu::FEntry::ExecuteCheatMenuAction()
 {
-	CheatCommand->Execute(GetArgs(), FindPlayWorld());
+	CheatMenuAction->ExecuteWithArgs(GetArgs(), FindPlayWorld());
 
 	// Save the args to the config ini, so they can be restored the next time the cheat menu opens:
 	if (GConfig != nullptr)
@@ -316,13 +317,11 @@ void SCheatMenu::FEntry::ExecuteCheatCommand()
 
 void SCheatMenu::CollectCheats()
 {
-	const UWorld* CurrentWorld = FindPlayWorld();
-
 	// Clear previous:
 	for (const TSharedPtr<FEntry>& Entry : Entries)
 	{
-		Entry->CheatCommand->OnLogMessage.RemoveAll(this);
-		Entry->CheatCommand->OnAfterExecuted.RemoveAll(this);
+		Entry->CheatMenuAction->OnLogMessage.RemoveAll(this);
+		Entry->CheatMenuAction->OnAfterExecuted.RemoveAll(this);
 	}
 	Entries.Empty();
 	SectionNamesInTabNames.Empty();
@@ -338,16 +337,11 @@ void SCheatMenu::CollectCheats()
 		const FName& Tab = Settings.MenuSectionName.Get(SECTION_NAME_NONE);
 		SectionNamesInTabNames.FindOrAdd(Section).AddUnique(Tab);
 
-		for (ICheatCommand* CheatCommand : Collection->GetRegisteredCheatCommands())
+		for (ICheatMenuAction* CheatMenuAction : Collection->GetRegisteredCheatMenuActions())
 		{
-			Entries.Add(MakeShared<FEntry>(CheatCommand, Settings));
-			CheatCommand->OnLogMessage.AddSP(this, &SCheatMenu::HandleCheatLogMessage);
-			CheatCommand->OnAfterExecuted.AddSP(this, &SCheatMenu::HandleCheatExecuted);
-
-			for (ICheatCommand* Variant : CheatCommand->GetVariants(CurrentWorld))
-			{
-				Entries.Add(MakeShared<FEntry>(Variant, Settings));
-			}
+			Entries.Add(MakeShared<FEntry>(CheatMenuAction, Settings));
+			CheatMenuAction->OnLogMessage.AddSP(this, &SCheatMenu::HandleCheatLogMessage);
+			CheatMenuAction->OnAfterExecuted.AddSP(this, &SCheatMenu::HandleCheatExecuted);
 		}
 	}
 
@@ -370,15 +364,15 @@ TArray<TSharedPtr<SCheatMenu::FEntry>> SCheatMenu::FilterCommands(const FTabName
 	});
 }
 
-TArray<TSharedPtr<SCheatMenu::FEntry>> SCheatMenu::FilterCommands(const TArray<FString>& CheatCommands) const
+TArray<TSharedPtr<SCheatMenu::FEntry>> SCheatMenu::FilterCommands(const TArray<FString>& CheatMenuActions) const
 {
-	TArray<TSharedPtr<FEntry>> Result = Entries.FilterByPredicate([&CheatCommands](const TSharedPtr<FEntry>& Entry)
+	TArray<TSharedPtr<FEntry>> Result = Entries.FilterByPredicate([&CheatMenuActions](const TSharedPtr<FEntry>& Entry)
 	{
-		return CheatCommands.Contains(Entry->GetCommandName());
+		return CheatMenuActions.Contains(Entry->GetCommandName());
 	});
-	Result.Sort([&CheatCommands](const TSharedPtr<FEntry>& Lhs, const TSharedPtr<FEntry>& Rhs)
+	Result.Sort([&CheatMenuActions](const TSharedPtr<FEntry>& Lhs, const TSharedPtr<FEntry>& Rhs)
 	{
-		return CheatCommands.IndexOfByKey(Lhs->GetCommandName()) < CheatCommands.IndexOfByKey(Rhs->GetCommandName());
+		return CheatMenuActions.IndexOfByKey(Lhs->GetCommandName()) < CheatMenuActions.IndexOfByKey(Rhs->GetCommandName());
 	});
 	return Result;
 }
@@ -445,26 +439,26 @@ void SCheatMenu::RefreshTabContent()
 	}
 	else if (CurrentTabName == FAVORITE_TAB_NAME)
 	{
-		ConstructCommandsSection(NAME_None, FilterCommands(FavoriteCheatCommands));
+		ConstructCommandsSection(NAME_None, FilterCommands(FavoriteCheatMenuActions));
 	}
 	else if (CurrentTabName == RECENTLY_USED_TAB_NAME)
 	{
-		ConstructCommandsSection(NAME_None, FilterCommands(RecentlyUsedCheatCommands));
+		ConstructCommandsSection(NAME_None, FilterCommands(RecentlyUsedCheatMenuActions));
 	}
 	else if (CurrentTabName == FILTER_RESULT_TAB_NAME)
 	{
-		ConstructCommandsSection(NAME_None, FilterCommands(TextFilteredCheatCommands));
+		ConstructCommandsSection(NAME_None, FilterCommands(TextFilteredCheatMenuActions));
 	}
 }
 
-void SCheatMenu::ConstructCommandsSection(const FSectionName& SectionName, const TArray<TSharedPtr<FEntry>>& CheatCommands)
+void SCheatMenu::ConstructCommandsSection(const FSectionName& SectionName, const TArray<TSharedPtr<FEntry>>& CheatMenuActions)
 {
 	SectionList->AddSlot()
 	.HAlign(HAlign_Fill)
 	.VAlign(VAlign_Fill)
 	.FillEmptySpace(true)
 	[
-		ConstructSection(SectionName, ConstructCheatCommandItems(CheatCommands))
+		ConstructSection(SectionName, ConstructCheatMenuActionItems(CheatMenuActions))
 	];
 }
 
@@ -544,7 +538,7 @@ TSharedRef<SWidget> SCheatMenu::ConstructSection(const FSectionName& SectionName
 	];
 }
 
-TSharedRef<SWidget> SCheatMenu::ConstructCheatCommandItems(const TArray<TSharedPtr<FEntry>>& CheatCommands)
+TSharedRef<SWidget> SCheatMenu::ConstructCheatMenuActionItems(const TArray<TSharedPtr<FEntry>>& CheatMenuActions)
 {
 	TSharedRef<SWrapBox> OuterWrapBox =
 		SNew(SWrapBox)
@@ -553,11 +547,11 @@ TSharedRef<SWidget> SCheatMenu::ConstructCheatCommandItems(const TArray<TSharedP
 		.InnerSlotPadding(FVector2d(10.f))
 		.UseAllottedSize(true);
 
-	for (auto Itr = CheatCommands.CreateConstIterator(); Itr; ++Itr)
+	for (auto Itr = CheatMenuActions.CreateConstIterator(); Itr; ++Itr)
 	{
 		TSharedPtr<FEntry> Entry = *Itr;
-		const ICheatCommand* CheatCommand = Entry->CheatCommand;
-		const FString CheatName = CheatCommand->GetCommandName();
+		const ICheatMenuAction* CheatMenuAction = Entry->CheatMenuAction;
+		const FString CheatName = CheatMenuAction->GetName();
 		TSharedPtr<SVerticalBox> CommandBox;
 
 		OuterWrapBox->AddSlot()
@@ -585,7 +579,7 @@ TSharedRef<SWidget> SCheatMenu::ConstructCheatCommandItems(const TArray<TSharedP
 					.ContentPadding(0.f)
 					.ToolTipText_Lambda([this, CheatName]()
 					{
-						return FavoriteCheatCommands.Contains(CheatName) ?
+						return FavoriteCheatMenuActions.Contains(CheatName) ?
 							INVTEXT("Remove from favorites") : INVTEXT("Add to favorites");
 					})
 					.OnClicked(this, &SCheatMenu::HandleCheatFavoriteButtonClicked, CheatName)
@@ -595,12 +589,12 @@ TSharedRef<SWidget> SCheatMenu::ConstructCheatCommandItems(const TArray<TSharedP
 						.Font(FAppStyle::Get().GetFontStyle("NormalBold"))
 						.ColorAndOpacity_Lambda([this, CheatName]()
 						{
-							return FavoriteCheatCommands.Contains(CheatName) ?
+							return FavoriteCheatMenuActions.Contains(CheatName) ?
 								EStyleColor::AccentYellow : EStyleColor::AccentGray;
 						})
 						.Text_Lambda([this, CheatName]()
 						{
-							return FavoriteCheatCommands.Contains(CheatName) ?
+							return FavoriteCheatMenuActions.Contains(CheatName) ?
 								INVTEXT("★") : INVTEXT("☆");
 						})
 					]
@@ -614,14 +608,14 @@ TSharedRef<SWidget> SCheatMenu::ConstructCheatCommandItems(const TArray<TSharedP
 					SNew(SButton)
 					.OnClicked_Lambda([Entry]() -> FReply
 					{
-						Entry->ExecuteCheatCommand();
+						Entry->ExecuteCheatMenuAction();
 						return FReply::Handled();
 					})
 					[
 						SNew(STextBlock)
 						.Justification(ETextJustify::Center)
-						.Text(FText::FromString(CheatCommand->GetDisplayName()))
-						.ToolTipText(FText::FromString(CheatCommand->GetCommandInfo()))
+						.Text(FText::FromString(CheatMenuAction->GetDisplayName()))
+						.ToolTipText(FText::FromString(CheatMenuAction->GetCommandInfo()))
 						.HighlightText_Lambda([this](){ return FilterText.Get(FText()); })
 					]
 				]
@@ -630,10 +624,10 @@ TSharedRef<SWidget> SCheatMenu::ConstructCheatCommandItems(const TArray<TSharedP
 
 		// Arguments:
 		auto ArgValueItr = Entry->Args.CreateIterator();
-		for (const ICheatCommand::FArgumentInfo& ArgumentInfo : CheatCommand->GetArgumentsInfo())
+		for (const ICheatMenuAction::FArgumentInfo& ArgumentInfo : CheatMenuAction->GetArgumentsInfo())
 		{
 			TSharedPtr<FString>& ArgValue = *ArgValueItr; ++ArgValueItr;
-			const bool bIsText = (ArgumentInfo.Style == EArgumentStyle::Text);
+			const bool bIsText = (ArgumentInfo.Style == EArgumentStyle::Text || ArgumentInfo.Style == EArgumentStyle::DropdownText);
 
 			CommandBox->AddSlot()
 			.HAlign(HAlign_Fill)
@@ -669,7 +663,7 @@ TSharedRef<SWidget> SCheatMenu::ConstructCheatCommandItems(const TArray<TSharedP
 	return OuterWrapBox;
 }
 
-TSharedRef<SWidget> SCheatMenu::ConstructArgumentInput(const ICheatCommand::FArgumentInfo& ArgumentInfo, TSharedPtr<FString> InOutValue)
+TSharedRef<SWidget> SCheatMenu::ConstructArgumentInput(const ICheatMenuAction::FArgumentInfo& ArgumentInfo, TSharedPtr<FString> InOutValue)
 {
 	static constexpr float MinDesiredWith = 64.f;
 	switch (ArgumentInfo.Style)
@@ -708,6 +702,36 @@ TSharedRef<SWidget> SCheatMenu::ConstructArgumentInput(const ICheatCommand::FArg
 			.IsChecked(bDefaultValue ? ECheckBoxState::Checked : ECheckBoxState::Unchecked)
 			.OnCheckStateChanged_Lambda([InOutValue](ECheckBoxState State) { *InOutValue = (State == ECheckBoxState::Checked ? "1" : "0"); });
 		}
+		case EArgumentStyle::DropdownText:
+		{
+			if (InOutValue->IsEmpty())
+			{
+				const TArray<TSharedPtr<FString>>& Options = *ArgumentInfo.OptionsSource.GetOptions(FindPlayWorld());
+				*InOutValue = (Options.IsEmpty() ? *InOutValue : *Options[0]);
+			}
+			return SNew(SComboBox<TSharedPtr<FString>>)
+			.ToolTipText(FText::FromString(ArgumentInfo.Description))
+			.OptionsSource(ArgumentInfo.OptionsSource.GetOptions(FindPlayWorld()))
+			.InitiallySelectedItem(InOutValue)
+			.OnSelectionChanged_Lambda([InOutValue](TSharedPtr<FString> NewSelection, ESelectInfo::Type)
+			{
+				if (NewSelection.IsValid())
+				{
+					*InOutValue = *NewSelection;
+				}
+			})
+			.OnGenerateWidget_Lambda([](TSharedPtr<FString> Option)
+			{
+				return SNew(STextBlock)
+				.Text(FText::FromString(*Option))
+				.MinDesiredWidth(MinDesiredWith * 2.f);
+			})
+			[
+				SNew(STextBlock)
+				.Text_Lambda([InOutValue](){ return FText::FromString(*InOutValue); })
+				.MinDesiredWidth(MinDesiredWith * 2.f)
+			];
+		}
 		default: case EArgumentStyle::Text:
 		{
 			const FString DefaultValue = *InOutValue;
@@ -722,7 +746,7 @@ TSharedRef<SWidget> SCheatMenu::ConstructArgumentInput(const ICheatCommand::FArg
 
 void SCheatMenu::HandleFilterTextChanged(const FText& NewFilterText)
 {
-	TextFilteredCheatCommands.Empty();
+	TextFilteredCheatMenuActions.Empty();
 	if (NewFilterText.IsEmpty())
 	{
 		FilterText.Reset();
@@ -733,7 +757,7 @@ void SCheatMenu::HandleFilterTextChanged(const FText& NewFilterText)
 		FilterText = NewFilterText;
 		CurrentTabName = FILTER_RESULT_TAB_NAME;
 
-		Algo::TransformIf(Entries, OUT TextFilteredCheatCommands,
+		Algo::TransformIf(Entries, OUT TextFilteredCheatMenuActions,
 			/*Condition*/ [NewFilterText](const TSharedPtr<FEntry>& Entry){ return Entry->MatchesFilterText(NewFilterText.ToString()); },
 			/*Transform*/ [](const TSharedPtr<FEntry>& Entry){ return Entry->GetCommandName(); });
 	}
@@ -741,7 +765,7 @@ void SCheatMenu::HandleFilterTextChanged(const FText& NewFilterText)
 	RefreshTabContent();
 }
 
-void SCheatMenu::HandleCheatLogMessage(const ICheatCommand& Command, ELogVerbosity::Type Verbosity, const FString& Message)
+void SCheatMenu::HandleCheatLogMessage(const ICheatMenuAction& Command, ELogVerbosity::Type Verbosity, const FString& Message)
 {
 	EStyleColor Color;
 	FText PrefixIcon = FText();
@@ -763,24 +787,24 @@ void SCheatMenu::HandleCheatLogMessage(const ICheatCommand& Command, ELogVerbosi
 			return;
 	}
 
-	ErrorText->SetText(FText::Format(INVTEXT("{0}[{1}] {2}"), PrefixIcon, FText::FromString(Command.GetCommandName()), FText::FromString(Message)));
+	ErrorText->SetText(FText::Format(INVTEXT("{0}[{1}] {2}"), PrefixIcon, FText::FromString(Command.GetName()), FText::FromString(Message)));
 	ErrorText->SetColorAndOpacity(Color);
 }
 
-void SCheatMenu::HandleCheatExecuted(const ICheatCommand& CheatCommand, UWorld* World, TArray<FString> Args)
+void SCheatMenu::HandleCheatExecuted(const ICheatMenuAction& CheatMenuAction, UWorld* World, TArray<FString> Args)
 {
-	InsertCheatIntoRecentlyUsedList(CheatCommand.GetCommandName());
-	OnCheatExecuted.ExecuteIfBound(CheatCommand, World, Args);
+	InsertCheatIntoRecentlyUsedList(CheatMenuAction.GetName());
+	OnCheatExecuted.ExecuteIfBound(CheatMenuAction, World, Args);
 }
 
 void SCheatMenu::InsertCheatIntoRecentlyUsedList(const FString& CheatName)
 {
-	RecentlyUsedCheatCommands.Remove(CheatName);
-	RecentlyUsedCheatCommands.Insert(CheatName, 0);
+	RecentlyUsedCheatMenuActions.Remove(CheatName);
+	RecentlyUsedCheatMenuActions.Insert(CheatName, 0);
 
-	if (RecentlyUsedCheatCommands.Num() > NumRecentlyUsedCheatsToShow)
+	if (RecentlyUsedCheatMenuActions.Num() > NumRecentlyUsedCheatsToShow)
 	{
-		RecentlyUsedCheatCommands.SetNum(NumRecentlyUsedCheatsToShow);
+		RecentlyUsedCheatMenuActions.SetNum(NumRecentlyUsedCheatsToShow);
 	}
 
 	SaveFavoriteAndRecentlyUsedCheats();
@@ -799,13 +823,13 @@ FReply SCheatMenu::HandleCheatFavoriteButtonClicked(FString CheatName)
 
 void SCheatMenu::ToggleCheatForFavorites(const FString& CheatName)
 {
-	if (FavoriteCheatCommands.Contains(CheatName))
+	if (FavoriteCheatMenuActions.Contains(CheatName))
 	{
-		FavoriteCheatCommands.Remove(CheatName);
+		FavoriteCheatMenuActions.Remove(CheatName);
 	}
 	else
 	{
-		FavoriteCheatCommands.Add(CheatName);
+		FavoriteCheatMenuActions.Add(CheatName);
 	}
 
 	SaveFavoriteAndRecentlyUsedCheats();
@@ -820,8 +844,8 @@ void SCheatMenu::SaveFavoriteAndRecentlyUsedCheats() const
 {
 	if (GConfig != nullptr)
 	{
-		GConfig->SetArray(CHEAT_MENU_INI_SECTION, CHEAT_MENU_INI_FAVORITES, FavoriteCheatCommands, CHEAT_MENU_INI_FILE);
-		GConfig->SetArray(CHEAT_MENU_INI_SECTION, CHEAT_MENU_INI_RECENTLY_USED, RecentlyUsedCheatCommands, CHEAT_MENU_INI_FILE);
+		GConfig->SetArray(CHEAT_MENU_INI_SECTION, CHEAT_MENU_INI_FAVORITES, FavoriteCheatMenuActions, CHEAT_MENU_INI_FILE);
+		GConfig->SetArray(CHEAT_MENU_INI_SECTION, CHEAT_MENU_INI_RECENTLY_USED, RecentlyUsedCheatMenuActions, CHEAT_MENU_INI_FILE);
 		GConfig->Flush(false, CHEAT_MENU_INI_FILE);
 	}
 }
@@ -830,7 +854,7 @@ void SCheatMenu::RestoreFavoriteAndRecentlyUsedCheats()
 {
 	if (GConfig != nullptr)
 	{
-		GConfig->GetArray(CHEAT_MENU_INI_SECTION, CHEAT_MENU_INI_FAVORITES, OUT FavoriteCheatCommands, CHEAT_MENU_INI_FILE);
-		GConfig->GetArray(CHEAT_MENU_INI_SECTION, CHEAT_MENU_INI_RECENTLY_USED, OUT RecentlyUsedCheatCommands, CHEAT_MENU_INI_FILE);
+		GConfig->GetArray(CHEAT_MENU_INI_SECTION, CHEAT_MENU_INI_FAVORITES, OUT FavoriteCheatMenuActions, CHEAT_MENU_INI_FILE);
+		GConfig->GetArray(CHEAT_MENU_INI_SECTION, CHEAT_MENU_INI_RECENTLY_USED, OUT RecentlyUsedCheatMenuActions, CHEAT_MENU_INI_FILE);
 	}
 }

@@ -9,13 +9,13 @@
 
 #pragma once
 
-#include "CheatCommand.h"
+#include "CheatMenuAction.h"
 #include "CoreMinimal.h"
 #include "Widgets/DeclarativeSyntaxSupport.h"
 #include "Widgets/Layout/SWrapBox.h"
 #include "Widgets/SCompoundWidget.h"
 
-DECLARE_DELEGATE_ThreeParams(FOnCheatExecuted, const ICheatCommand&, UWorld*, TArray<FString>);
+DECLARE_DELEGATE_ThreeParams(FOnCheatExecuted, const ICheatMenuAction&, UWorld*, TArray<FString>);
 
 class WEEKENDUTILS_API SCheatMenu : public SCompoundWidget
 {
@@ -36,22 +36,22 @@ protected:
 
 	struct FEntry
 	{
-		explicit FEntry(ICheatCommand* InCheatCommand, const FCheatMenuCategorySettings& InSettings);
+		explicit FEntry(ICheatMenuAction* InCheatMenuAction, const FCheatMenuCategorySettings& InSettings);
 
-		ICheatCommand* CheatCommand = nullptr;
+		ICheatMenuAction* CheatMenuAction = nullptr;
 		FCheatMenuCategorySettings Settings;
 		TArray<TSharedPtr<FString>> Args;
 
 		TArray<FString> GetArgs() const;
 		const FString& GetCommandName() const;
 		bool MatchesFilterText(const FString& TextToFilter) const;
-		void ExecuteCheatCommand();
+		void ExecuteCheatMenuAction();
 	};
 
 	FTabName CurrentTabName = NAME_None;
-	TArray<FString> FavoriteCheatCommands;
-	TArray<FString> TextFilteredCheatCommands;
-	TArray<FString> RecentlyUsedCheatCommands;
+	TArray<FString> FavoriteCheatMenuActions;
+	TArray<FString> TextFilteredCheatMenuActions;
+	TArray<FString> RecentlyUsedCheatMenuActions;
 	uint16 NumRecentlyUsedCheatsToShow = 16;
 	TOptional<FText> FilterText = {};
 
@@ -67,18 +67,18 @@ protected:
 	void CollectCheats();
 	void PopulateTabList();
 	void RefreshTabContent();
-	void ConstructCommandsSection(const FSectionName& SectionName, const TArray<TSharedPtr<FEntry>>& CheatCommands);
+	void ConstructCommandsSection(const FSectionName& SectionName, const TArray<TSharedPtr<FEntry>>& CheatMenuActions);
 
 	TArray<TSharedPtr<FEntry>> FilterCommands(const FTabName& TabName, const FSectionName& SectionName) const;
-	TArray<TSharedPtr<FEntry>> FilterCommands(const TArray<FString>& CheatCommands) const;
+	TArray<TSharedPtr<FEntry>> FilterCommands(const TArray<FString>& CheatMenuActions) const;
 
 	TSharedRef<SWidget> ConstructSection(const FSectionName& SectionName, TSharedRef<SWidget> Content);
-	TSharedRef<SWidget> ConstructCheatCommandItems(const TArray<TSharedPtr<FEntry>>& CheatCommands);
-	TSharedRef<SWidget> ConstructArgumentInput(const ICheatCommand::FArgumentInfo& ArgumentInfo, TSharedPtr<FString> InOutValue);
+	TSharedRef<SWidget> ConstructCheatMenuActionItems(const TArray<TSharedPtr<FEntry>>& CheatMenuActions);
+	TSharedRef<SWidget> ConstructArgumentInput(const ICheatMenuAction::FArgumentInfo& ArgumentInfo, TSharedPtr<FString> InOutValue);
 
 	void HandleFilterTextChanged(const FText& NewFilterText);
-	void HandleCheatLogMessage(const ICheatCommand& CheatCommand, ELogVerbosity::Type Verbosity, const FString& Message);
-	void HandleCheatExecuted(const ICheatCommand& CheatCommand, UWorld* World, TArray<FString> Args);
+	void HandleCheatLogMessage(const ICheatMenuAction& CheatMenuAction, ELogVerbosity::Type Verbosity, const FString& Message);
+	void HandleCheatExecuted(const ICheatMenuAction& CheatMenuAction, UWorld* World, TArray<FString> Args);
 	FReply HandleCheatFavoriteButtonClicked(FString CheatName);
 
 	void InsertCheatIntoRecentlyUsedList(const FString& CheatName);
