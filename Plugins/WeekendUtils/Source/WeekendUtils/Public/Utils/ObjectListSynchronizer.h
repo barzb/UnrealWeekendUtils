@@ -61,6 +61,22 @@ public:
 		return *this;
 	}
 
+	/** PredicateType must equivalent to: TFunctionRef<ObjectType*(InitDataType&, int32)> */
+	template <typename PredicateType>
+	TObjectListSynchronizer& ForEachMissingElementAndIndex(PredicateType Predicate)
+	{
+		const int32 NumMissing = (InitDataList.Num() - ObjectList.Num());
+		if (NumMissing <= 0)
+			return *this;
+
+		ObjectList.SetNumUninitialized(InitDataList.Num());
+		for (int32 i = (InitDataList.Num() - NumMissing); i < InitDataList.Num(); ++i)
+		{
+			ObjectList[i] = Predicate(InitDataList[i], i);
+		}
+		return *this;
+	}
+
 	/** PredicateType must equivalent to: TFunctionRef<void(ObjectType&)> */
 	template <typename PredicateType>
 	TObjectListSynchronizer& ForEachRemovedElement(PredicateType Predicate)
@@ -83,6 +99,17 @@ public:
 		return *this;
 	}
 
+	/** PredicateType must equivalent to: TFunctionRef<void(ObjectType&, InitDataType&, int32)> */
+	template <typename PredicateType>
+	TObjectListSynchronizer& ForEachUpdatedElementAndIndex(PredicateType Predicate)
+	{
+		for (int32 i = 0; i < UpdatedObjects.Num(); ++i)
+		{
+			Predicate(*UpdatedObjects[i], InitDataList[i], i);
+		}
+		return *this;
+	}
+
 private:
 	TArray<TObjectPtr<ObjectType>>& ObjectList;
 	InitListType& InitDataList;
@@ -98,4 +125,3 @@ private:
 		UpdatedObjects = ObjectList;
 	}
 };
-
