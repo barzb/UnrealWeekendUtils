@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2024 by Benjamin Barz and contributors. See file: CREDITS.md
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendScenario UE5 Plugin.
 ///
@@ -9,6 +9,7 @@
 
 #include "Scenario/Tasks/AsyncScenarioTask.h"
 
+#include "Scenario/ScenarioService.h"
 #include "WeekendScenario.h"
 
 namespace
@@ -19,6 +20,12 @@ namespace
 		const int32 ParentTagLength = ParentTag.IsValid() ? (GetNum(ParentTag.ToString()) + 1) : 0;
 		return GameplayTag.ToString().RightChop(ParentTagLength);
 	}
+}
+
+UAsyncScenarioTask::UAsyncScenarioTask(const FObjectInitializer& ObjectInitializer) :
+	Super(ObjectInitializer)
+{
+	ServiceDependencies.Add<UScenarioService>();
 }
 
 TOptional<FString> UAsyncScenarioTask::GetDebugStringForChildTask(FName ChildTaskInstanceName) const
@@ -56,6 +63,12 @@ double UAsyncScenarioTask::GetRuntime() const
 		return (*TaskEndTime - *TaskStartTime);
 
 	return (GetWorld()->GetTimeSeconds() - *TaskStartTime);
+}
+
+void UAsyncScenarioTask::CreateCheckpoint(const FGameplayTag& Checkpoint)
+{
+	ActiveTaskData.PassedCheckpoints.AddTag(Checkpoint);
+	ActiveTaskData.LastPassedEntryPoint = Checkpoint;
 }
 
 FString UAsyncScenarioTask::GetDebugString() const
@@ -119,7 +132,15 @@ void UAsyncScenarioTask::Activate()
 	TaskStartTime = GetWorld()->GetTimeSeconds();
 	TaskEndTime.Reset();
 
-	ReceiveStart();
+	ActiveTaskData = UseScenarioService().SummonScenarioTaskData(*this);
+	if (ActiveTaskData.LastPassedEntryPoint.IsValid())
+	{
+		ReceiveStartAtEntryPoint(ActiveTaskData.LastPassedEntryPoint);
+	}
+	else
+	{
+		ReceiveStart();
+	}
 }
 
 void UAsyncScenarioTask::OnDestroy(bool bHasOwnerFinished)
@@ -164,6 +185,11 @@ void UAsyncScenarioTask::Cleanup()
 	}
 }
 
+UScenarioService& UAsyncScenarioTask::UseScenarioService() const
+{
+	return UseGameService<UScenarioService>(this);
+}
+
 void UAsyncScenarioTask::Complete(FGameplayTag Result)
 {
 	CompletionResult = Result;
@@ -175,4 +201,5 @@ void UAsyncScenarioTask::Complete(FGameplayTag Result)
 }
 
 void UAsyncScenarioTask::ReceiveStart_Implementation() {}
+void UAsyncScenarioTask::ReceiveStartAtEntryPoint_Implementation(FGameplayTag EntryPoint) {}
 void UAsyncScenarioTask::ReceiveComplete_Implementation(const FGameplayTag& Result) {}

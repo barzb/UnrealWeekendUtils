@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2024 by Benjamin Barz and contributors. See file: CREDITS.md
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendScenario UE5 Plugin.
 ///
@@ -33,4 +33,12 @@ void UScenarioTasksComponent::GetOwnedGameplayTags(FGameplayTagContainer& OutTag
 {
 	OutTagContainer.Reset();
 	OutTagContainer.AppendTags(GameplayTagContainer);
+}
+
+void UScenarioTasksComponent::WriteToSaveGame(const FCurrentSaveGame& SaveGame)
+{
+}
+
+void UScenarioTasksComponent::RestoreFromSaveGame(const FCurrentSaveGame& SaveGame)
+{
 }

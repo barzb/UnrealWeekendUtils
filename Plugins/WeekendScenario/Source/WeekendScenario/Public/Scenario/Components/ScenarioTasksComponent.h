@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2024 by Benjamin Barz and contributors. See file: CREDITS.md
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendScenario UE5 Plugin.
 ///
@@ -15,6 +15,8 @@
 #include "GameplayTasksComponent.h"
 
 #include "ScenarioTasksComponent.generated.h"
+
+struct FCurrentSaveGame;
 
 DECLARE_MULTICAST_DELEGATE(FOnScenarioTagsChanged)
 
@@ -39,6 +41,9 @@ public:
 	// - IGameplayTagAssetInterface
 	virtual void GetOwnedGameplayTags(FGameplayTagContainer& OutTagContainer) const override;
 	// --
+
+	virtual void WriteToSaveGame(const FCurrentSaveGame& SaveGame);
+	virtual void RestoreFromSaveGame(const FCurrentSaveGame& SaveGame);
 
 protected:
 	FGameplayTagContainer GameplayTagContainer;

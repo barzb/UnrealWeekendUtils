@@ -12,13 +12,15 @@
 #include "CoreMinimal.h"
 #include "AsyncScenarioTask.h"
 
-#include "ScenarioTask_WaitForScenarioTags.generated.h"
+#include "ScenarioTask_CreateCheckpoint.generated.h"
+
+class USaveGameService;
 
 /**
  * #todo-docs
  */
-UCLASS(meta = (ExposedAsyncProxy = "WaitTask"))
-class WEEKENDSCENARIO_API UScenarioTask_WaitForScenarioTags : public UAsyncScenarioTask
+UCLASS()
+class WEEKENDSCENARIO_API UScenarioTask_CreateCheckpoint : public UAsyncScenarioTask
 {
 	GENERATED_BODY()
 
@@ -27,16 +29,15 @@ public:
 	/// TASK FACTORIES
 
 	UFUNCTION(BlueprintCallable, Category = "Scenario", meta = (DefaultToSelf = "TaskOwner", HidePin = "TaskOwner", HideResult, BlueprintInternalUseOnly = "TRUE"))
-	static UScenarioTask_WaitForScenarioTags* WaitForScenarioTag(TScriptInterface<IGameplayTaskOwnerInterface> TaskOwner, FGameplayTag TagToWaitFor, FName TaskName = "WaitForTag");
-
-	UFUNCTION(BlueprintCallable, Category = "Scenario", meta = (DefaultToSelf = "TaskOwner", HidePin = "TaskOwner", HideResult, BlueprintInternalUseOnly = "TRUE", Keywords = "Query"))
-	static UScenarioTask_WaitForScenarioTags* WaitForScenarioTags(TScriptInterface<IGameplayTaskOwnerInterface> TaskOwner, FGameplayTagQuery TagsQuery, FName TaskName = "WaitForTags");
+	static UScenarioTask_CreateCheckpoint* CreateCheckpoint(UAsyncScenarioTask* TaskOwner, FGameplayTag EntryPoint, bool bSaveGame = true, FName TaskName = "CreateCheckpoint");
 
 	///////////////////////////////////////////////////////////////////////////////////////
 
 protected:
 	UPROPERTY()
-	FGameplayTagQuery TagsQuery = {};
+	FGameplayTag EntryPointTag = {};
+	bool bShouldSaveGame = false;
+	TWeakObjectPtr<USaveGameService> SaveGameService = nullptr;
 
 	///////////////////////////////////////////////////////////////////////////////////////
 	/// OVERRIDES
@@ -48,6 +49,4 @@ protected:
 	// --
 
 	///////////////////////////////////////////////////////////////////////////////////////
-
-	virtual void CheckScenarioTagsRequirement();
 };

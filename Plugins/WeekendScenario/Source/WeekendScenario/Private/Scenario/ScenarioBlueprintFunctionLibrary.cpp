@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2024 by Benjamin Barz and contributors. See file: CREDITS.md
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendScenario UE5 Plugin.
 ///
@@ -17,7 +17,7 @@ namespace
 {
 	TOptional<FGameplayTagContainer> GetScenarioTags()
 	{
-		const TWeakObjectPtr<const UScenarioService> ScenarioService = UGameServiceLocator::FindService<UScenarioService>();
+		const TWeakObjectPtr<const UScenarioService> ScenarioService = UGameServiceLocator::FindServiceAsWeakPtr<UScenarioService>();
 		if (!ScenarioService.IsValid())
 			return {};
 

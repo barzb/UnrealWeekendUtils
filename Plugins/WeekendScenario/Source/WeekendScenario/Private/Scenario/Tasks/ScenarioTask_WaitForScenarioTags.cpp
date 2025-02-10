@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2024 by Benjamin Barz and contributors. See file: CREDITS.md
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendScenario UE5 Plugin.
 ///
@@ -10,12 +10,6 @@
 #include "Scenario/Tasks/ScenarioTask_WaitForScenarioTags.h"
 
 #include "Scenario/ScenarioService.h"
-
-UScenarioTask_WaitForScenarioTags::UScenarioTask_WaitForScenarioTags(const FObjectInitializer& ObjectInitializer) :
-	Super(ObjectInitializer)
-{
-	ServiceDependencies.Add<UScenarioService>();
-}
 
 UScenarioTask_WaitForScenarioTags* UScenarioTask_WaitForScenarioTags::WaitForScenarioTag(TScriptInterface<IGameplayTaskOwnerInterface> TaskOwner, FGameplayTag TagToWaitFor, FName TaskName)
 {
@@ -39,15 +33,13 @@ void UScenarioTask_WaitForScenarioTags::Activate()
 
 	if (IsRunning())
 	{
-		UseGameService<UScenarioService>(this)
-		.OnScenarioTagsChanged().AddUObject(this, &ThisClass::CheckScenarioTagsRequirement);
+		UseScenarioService().OnScenarioTagsChanged().AddUObject(this, &ThisClass::CheckScenarioTagsRequirement);
 	}
 }
 
 void UScenarioTask_WaitForScenarioTags::Cleanup()
 {
-	UseGameService<UScenarioService>(this)
-	.OnScenarioTagsChanged().RemoveAll(this);
+	UseScenarioService().OnScenarioTagsChanged().RemoveAll(this);
 
 	Super::Cleanup();
 }

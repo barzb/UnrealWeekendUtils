@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2024 by Benjamin Barz and contributors. See file: CREDITS.md
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendScenario UE5 Plugin.
 ///
@@ -152,9 +152,13 @@ void UK2Node_AsyncScenarioTask::GetMenuActions(FBlueprintActionDatabaseRegistrar
 
 FText UK2Node_AsyncScenarioTask::GetTooltipText() const
 {
-	const UClass* ScenarioTaskClass = GetScenarioTaskClassToSpawn();
-	return FText::Format(INVTEXT("Runs an async scenario task that can complete at a later time.\n\nDouble-click this node to open: {0}."),
-		FText::FromString(GetNameSafe(ScenarioTaskClass)));
+	if (const UClass* ScenarioTaskClass = GetScenarioTaskClassToSpawn())
+	{
+		return FText::Format(INVTEXT("Runs an async scenario task that can complete at a later time.\n\nDouble-click this node to open: {0}."),
+			FText::FromString(GetNameSafe(ScenarioTaskClass)));
+	}
+
+	return Super::GetTooltipText();
 }
 
 FText UK2Node_AsyncScenarioTask::GetNodeTitle(ENodeTitleType::Type TitleType) const
@@ -350,6 +354,18 @@ void UK2Node_AsyncScenarioTask::ExpandNode(FKismetCompilerContext& CompilerConte
 	const UEdGraphPin* FactoryTaskClassInputPin = GetScenarioTaskClassPin();
 	if (!FactoryTaskClassInputPin)
 	{
+		// Link the spawned task object to this node, mostly for the popup messages to know which node the task belongs to:
+		/*{
+			UK2Node_CallFunction* LinkToThisNodeCall = CompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, SourceGraph);
+			LinkToThisNodeCall->FunctionReference.SetExternalMember(GET_MEMBER_NAME_CHECKED(UK2Node_AsyncScenarioTask, LinkScenarioTaskToSpawningBlueprintNode), StaticClass());
+			LinkToThisNodeCall->AllocateDefaultPins();
+			LinkToThisNodeCall->FindPinChecked(TEXT("OriginNodeGuid"), EGPD_Input)->DefaultValue = NodeGuid.ToString();
+			UEdGraphPin* TaskInputPin = LinkToThisNodeCall->FindPinChecked(TEXT("SpawnedTask"), EGPD_Input);
+			bIsErrorFree &= Schema->TryCreateConnection(FactoryMethodScenarioTaskOutPin, TaskInputPin);
+			bIsErrorFree &= Schema->TryCreateConnection(LastThenPin, LinkToThisNodeCall->GetExecPin());
+			LastThenPin = LinkToThisNodeCall->GetThenPin();
+		}*/
+
 		Super::ExpandNode(CompilerContext, SourceGraph);
 		return;
 	}

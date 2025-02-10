@@ -1,10 +1,17 @@
-﻿// (c) by Benjamin Barz
+﻿///////////////////////////////////////////////////////////////////////////////////////
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
+///
+/// This file is part of the WeekendScenario UE5 Plugin.
+///
+/// Distributed under the MIT License. See file: LICENSE.md
+///
+///////////////////////////////////////////////////////////////////////////////////////
 
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameplayTagContainer.h"
 #include "Engine/DeveloperSettings.h"
+#include "Scenario/Components/ScenarioTasksComponent.h"
 
 #include "ScenarioProjectSettings.generated.h"
 
@@ -17,9 +24,6 @@ class WEEKENDSCENARIO_API UScenarioProjectSettings : public UDeveloperSettings
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(Config, EditAnywhere, Category = "General") // ?
-	FGameplayTag GenericScenarioTaskSuccessTag = FGameplayTag();
-
-	UPROPERTY(Config, EditAnywhere, Category = "General") // ?
-	FGameplayTag GenericScenarioTaskFailureTag = FGameplayTag();
+	UPROPERTY(Config, EditAnywhere, Category = "Scenario Service", NoClear)
+	TSubclassOf<UScenarioTasksComponent> ScenarioTasksComponentClass = UScenarioTasksComponent::StaticClass();
 };

@@ -10,11 +10,19 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Modules/ModuleManager.h"
+#include "GameplayTagContainer.h"
 
-class FWeekendScenarioEditorModule : public IModuleInterface
+#include "ActiveScenarioTaskData.generated.h"
+
+USTRUCT()
+struct WEEKENDSCENARIO_API FActiveScenarioTaskData
 {
+	GENERATED_BODY()
+
 public:
-	virtual void StartupModule() override;
-	virtual void ShutdownModule() override;
+	UPROPERTY(SaveGame, EditDefaultsOnly)
+	FGameplayTagContainer PassedCheckpoints = {};
+
+	UPROPERTY(SaveGame, EditDefaultsOnly)
+	FGameplayTag LastPassedEntryPoint = {};
 };

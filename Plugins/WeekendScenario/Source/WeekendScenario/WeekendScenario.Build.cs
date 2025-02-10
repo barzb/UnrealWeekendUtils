@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2024 by Benjamin Barz and contributors. See file: CREDITS.md
+ * Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
  *
  * This file is part of the WeekendScenario UE5 Plugin.
  *
@@ -33,6 +33,7 @@ public class WeekendScenario : ModuleRules
 				"DeveloperSettings",
 				"GameplayTags",
 				"GameplayTasks",
+				"StructUtils",
 				"WeekendUtils",
 			}
 		);
