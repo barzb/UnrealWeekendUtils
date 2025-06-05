@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2023 by Benjamin Barz and contributors. See file: CREDITS.md
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendUtils UE5 Plugin.
 ///
@@ -10,7 +10,7 @@
 #if WITH_AUTOMATION_WORKER
 
 #include "GameService/GameServiceUtils.h"
-#include "Mocks/GameServiceMocks.h"
+#include "GameService/Mocks/GameServiceMocks.h"
 
 using namespace Mocks;
 

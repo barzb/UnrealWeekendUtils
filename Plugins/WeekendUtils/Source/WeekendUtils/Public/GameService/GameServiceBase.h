@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2023 by Benjamin Barz and contributors. See file: CREDITS.md
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendUtils UE5 Plugin.
 ///
@@ -12,8 +12,22 @@
 #include "CoreMinimal.h"
 #include "GameService/GameServiceUser.h"
 #include "UObject/Object.h"
+#include "Utils/EnumUtils.h"
 
 #include "GameServiceBase.generated.h"
+
+/** Defines how long a game service will stay alive. */
+UENUM()
+enum class EGameServiceLifetime : uint8
+{
+	/** The game service shuts down when the current world tears down. */
+	ShutdownWithWorld,
+
+	/** The game service shuts down together with the game instance. */
+	ShutdownWithGameInstance
+};
+
+DEFINE_ENUM_STRING_CONVERTERS(GameServiceLifetime, EGameServiceLifetime);
 
 /**
  * Base class for all game services.
@@ -21,7 +35,7 @@
  * Each derived service class also gains access to the inherited GameServiceUser API to configure
  * and access dependencies to other services or subsystems.
  */
-UCLASS(Abstract)
+UCLASS(Abstract, EditInlineNew)
 class WEEKENDUTILS_API UGameServiceBase : public UObject, public FGameServiceUser
 {
 	GENERATED_BODY()
@@ -49,7 +63,19 @@ public:
 	/** @returns optional information about the status of this service, mainly for debugging purposes. */
 	virtual TOptional<FString> GetServiceStatusInfo() const { return {}; }
 
+	/** @returns the configured lifetime type, which defines how long the service wants to stay alive. */
+	EGameServiceLifetime GetLifetime() const { return Lifetime; }
+
+	/** @returns the configured lifetime type, which defines how long the service wants to stay alive. */
+	static EGameServiceLifetime GetLifetimeOf(const TSubclassOf<UGameServiceBase>& ServiceClass)
+	{
+		return GetDefault<UGameServiceBase>(ServiceClass)->GetLifetime();
+	}
+
 protected:
+	/** Defines how long a game service will stay alive. */
+	EGameServiceLifetime Lifetime = EGameServiceLifetime::ShutdownWithWorld;
+
 	/**
 	 * Marks this class to be replicated from the server to clients.
 	 * Supposed to be set in the constructor.
@@ -57,9 +83,30 @@ protected:
 	 */
 	bool bReplicates = false;
 
+	// - FGameServiceUser
+	virtual void CheckGameServiceDependencies() const override;
+	// --
+
 	/** @returns whether this service instance has network authority (= server). #todo-multiplayer CURRENTLY NOT SUPPORTED */
 	bool HasAuthority() const { return true; }
 };
+
+inline void UGameServiceBase::CheckGameServiceDependencies() const
+{
+	if (Lifetime == EGameServiceLifetime::ShutdownWithWorld)
+		return; // World services can have dependencies to anything since they die first.
+
+	for (const TSubclassOf<UObject> DependencyClass : ServiceDependencies)
+	{
+		const UGameServiceBase* ServiceDependency = DependencyClass->GetDefaultObject<UGameServiceBase>();
+		if (!ServiceDependency)
+			continue;
+
+		checkf(ServiceDependency->Lifetime != EGameServiceLifetime::ShutdownWithWorld,
+			TEXT("%s is configured as %s and can thus not depend on world service %s"),
+			*GetNameSafe(this), *LexToString(ServiceDependency->Lifetime), *GetNameSafe(DependencyClass));
+	}
+}
 
 using FGameServiceClass = TSubclassOf<UObject>;
 using FGameServiceInstanceClass = TSubclassOf<UGameServiceBase>;

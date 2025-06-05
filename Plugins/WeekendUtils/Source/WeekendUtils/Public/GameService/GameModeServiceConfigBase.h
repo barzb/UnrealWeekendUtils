@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2023 by Benjamin Barz and contributors. See file: CREDITS.md
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendUtils UE5 Plugin.
 ///
@@ -21,12 +21,15 @@
  * When a world with that game mode is entered, the @UWorldGameServiceRunner will automatically register
  * the CDO of the config with the service manager.
  */
-UCLASS(Abstract)
+UCLASS(Abstract, EditInlineNew)
 class WEEKENDUTILS_API UGameModeServiceConfigBase : public UGameServiceConfig
 {
 	GENERATED_BODY()
 
 public:
+	/** This is where services should be configured in derived classes. Can be called multiple times in the editor. */
+	virtual void Configure() PURE_VIRTUAL(Configure);
+
 	/** @returns the CDO of the game mode service config class configured for given world, or nullptr. */
 	static const UGameModeServiceConfigBase* FindConfigForWorld(const UWorld& World);
 
@@ -34,8 +37,20 @@ public:
 	bool ShouldUseWithGameMode(const TSubclassOf<AGameModeBase>& GameModeClass) const;
 	template<class T> bool ShouldUseWithGameMode() const { return ShouldUseWithGameMode(T::StaticClass()); }
 
-protected:
 	/** Registers this config class to be used for worlds with given game mode class. */
-	void RegisterForMapsWithGameMode(const TSubclassOf<AGameModeBase>& GameModeClass);
-	template<class T> void RegisterForMapsWithGameMode() { RegisterForMapsWithGameMode(T::StaticClass()); }
+	void RegisterFor(const TSubclassOf<AGameModeBase>& GameModeClass);
+	template<class T> void RegisterFor() { RegisterFor(T::StaticClass()); }
+
+protected:
+	UPROPERTY(VisibleAnywhere)
+	TArray<TSubclassOf<AGameModeBase>> ConfiguredGameModes = {};
+
+	void Reconfigure();
+
+	// - UObject
+	virtual void PostInitProperties() override;
+#if WITH_EDITOR
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
+	// --
 };

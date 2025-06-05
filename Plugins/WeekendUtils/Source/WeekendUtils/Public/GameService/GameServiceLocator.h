@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2023 by Benjamin Barz and contributors. See file: CREDITS.md
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendUtils UE5 Plugin.
 ///
@@ -26,15 +26,30 @@ class WEEKENDUTILS_API UGameServiceLocator : public UBlueprintFunctionLibrary, p
 
 public:
 	/** @returns a service instance by ServiceClass if it was already started, or nullptr. */
+	template<typename T> typename TEnableIf<TIsDerivedFrom<T, UGameServiceBase>::IsDerived, T*>::Type
+	static /*(T*)*/ FindService()
+	{
+		return Cast<T>(FindServiceInternal(T::StaticClass()));
+	}
+
+	/** @returns a service instance by ServiceClass if it was already started, or nullptr. */
+	template<typename T> typename TEnableIf<TIsIInterface<T>::Value, T*>::Type
+	static /*(T*)*/ FindService()
+	{
+		TScriptInterface<T> ServiceInstance = FindServiceInternal(T::UClassType::StaticClass());
+		return Cast<T>(ServiceInstance.GetInterface());
+	}
+
+	/** @returns a service instance by ServiceClass if it was already started, or nullptr. */
 	template<typename T> typename TEnableIf<TIsDerivedFrom<T, UGameServiceBase>::IsDerived, TWeakObjectPtr<T>>::Type
-	static /*(TWeakObjectPtr<T>)*/ FindService()
+	static /*(TWeakObjectPtr<T>)*/ FindServiceAsWeakPtr()
 	{
 		return TWeakObjectPtr<T>(Cast<T>(FindServiceInternal(T::StaticClass())));
 	}
 
 	/** @returns a service instance by ServiceClass if it was already started, or nullptr. */
 	template<typename T> typename TEnableIf<TIsIInterface<T>::Value, TWeakInterfacePtr<T>>::Type
-	static /*(TWeakInterfacePtr<T>)*/ FindService()
+	static /*(TWeakInterfacePtr<T>)*/ FindServiceAsWeakPtr()
 	{
 		return TWeakInterfacePtr<T>(FindServiceInternal(T::UClassType::StaticClass()));
 	}
@@ -50,7 +65,8 @@ public:
 	template<typename T> typename TEnableIf<TIsIInterface<T>::Value, TScriptInterface<T>>::Type
 	static /*(TScriptInterface<T>)*/ FindServiceChecked()
 	{
-		return TScriptInterface<T>(FindServiceInternal(T::UClassType::StaticClass()));
+		UObject& ServiceInstance = *FindServiceInternal(T::UClassType::StaticClass());
+		return TScriptInterface<T>(&ServiceInstance);
 	}
 
 	/** (Blueprint utility) @returns a service instance by ServiceClass if it was already started, or nullptr. */

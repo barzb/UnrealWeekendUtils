@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2023 by Benjamin Barz and contributors. See file: CREDITS.md
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendUtils UE5 Plugin.
 ///
@@ -9,29 +9,32 @@
 
 #include "GameService/GameModeServiceConfigBase.h"
 
-namespace Internal
+#include "GameService/Settings/GameServiceFrameworkSettings.h"
+
+namespace
 {
-	static TMap<TSubclassOf<AGameModeBase>, TSubclassOf<UGameModeServiceConfigBase>> GConfigClassesByGameModes;
+	TMap<TSubclassOf<AGameModeBase>, TSubclassOf<UGameModeServiceConfigBase>> GConfigClassesByGameModes = {};
 }
 
-void UGameModeServiceConfigBase::RegisterForMapsWithGameMode(const TSubclassOf<AGameModeBase>& GameModeClass)
+void UGameModeServiceConfigBase::RegisterFor(const TSubclassOf<AGameModeBase>& GameModeClass)
 {
 	if (!HasAnyFlags(RF_ClassDefaultObject))
 		return;
 
-	TSubclassOf<UGameModeServiceConfigBase>& RegisteredConfigClass = Internal::GConfigClassesByGameModes.FindOrAdd(GameModeClass);
+	TSubclassOf<UGameModeServiceConfigBase>& RegisteredConfigClass = GConfigClassesByGameModes.FindOrAdd(GameModeClass);
 	if (RegisteredConfigClass != nullptr && RegisteredConfigClass != GetClass())
 	{
 		// Only one AutoRegisteredGameServiceConfig per game mode is allowed:
 		ensureMsgf(false, TEXT("GameServiceConfig for GameMode %s already has another config class configured!"));
 	}
 
+	ConfiguredGameModes.Add(GameModeClass);
 	RegisteredConfigClass = GetClass();
 }
 
 bool UGameModeServiceConfigBase::ShouldUseWithGameMode(const TSubclassOf<AGameModeBase>& GameModeClass) const
 {
-	for (const auto Itr : Internal::GConfigClassesByGameModes)
+	for (const auto Itr : GConfigClassesByGameModes)
 	{
 		const TSubclassOf<AGameModeBase> ConfiguredGameMode = Itr.Key;
 		const TSubclassOf<UGameModeServiceConfigBase> ConfiguredConfig = Itr.Value;
@@ -49,7 +52,7 @@ const UGameModeServiceConfigBase* UGameModeServiceConfigBase::FindConfigForWorld
 	if (CurrentGameModeClass == nullptr)
 		return nullptr; // No game mode configured in world settings.
 
-	for (const auto Itr : Internal::GConfigClassesByGameModes)
+	for (const auto Itr : GConfigClassesByGameModes)
 	{
 		const TSubclassOf<AGameModeBase> ConfiguredGameMode = Itr.Key;
 		const TSubclassOf<UGameModeServiceConfigBase> ConfiguredConfig = Itr.Value;
@@ -60,3 +63,40 @@ const UGameModeServiceConfigBase* UGameModeServiceConfigBase::FindConfigForWorld
 
 	return nullptr; // No config found for game mode.
 }
+
+void UGameModeServiceConfigBase::Reconfigure()
+{
+	ResetConfiguredServices();
+
+	while (ConfiguredGameModes.Num() > 0)
+	{
+		if (const TSubclassOf<AGameModeBase> GameModeClass = ConfiguredGameModes.Pop();
+			GConfigClassesByGameModes.Contains(GameModeClass) &&
+			GConfigClassesByGameModes[GameModeClass] == GetClass())
+		{
+			GConfigClassesByGameModes.Remove(GameModeClass);
+		}
+	}
+
+	Configure();
+}
+
+void UGameModeServiceConfigBase::PostInitProperties()
+{
+	Super::PostInitProperties();
+
+	if (HasAnyFlags(RF_ClassDefaultObject) && !GetClass()->HasAnyClassFlags(CLASS_Abstract))
+	{
+		Reconfigure();
+		GetMutableDefault<UGameServiceFrameworkSettings>()->RegisterServiceConfig(*this);
+	}
+}
+
+#if WITH_EDITOR
+void UGameModeServiceConfigBase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+
+	Reconfigure();
+}
+#endif

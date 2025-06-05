@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2023 by Benjamin Barz and contributors. See file: CREDITS.md
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendUtils UE5 Plugin.
 ///
@@ -59,6 +59,7 @@ public:
 
 protected:
 	FGameServiceUser() = default;
+	~FGameServiceUser() = default;
 
 	/**
 	 * Dependency config container for game services. Call ServiceDependencies.Add<T>() in the constructor of inherited classes.
@@ -116,7 +117,7 @@ protected:
 	bool IsGameServiceRegistered(const FGameServiceClass& ServiceClass) const;
 
 	template<typename T> typename TEnableIf<TIsDerivedFrom<T, UGameServiceBase>::IsDerived, T&>::Type
-	/*(T&)*/ UseGameService(const UObject* ServiceUser)
+	/*(T&)*/ UseGameService(const UObject* ServiceUser) const
 	{
 		return *Cast<T>(UseGameService_Internal(ServiceUser, T::StaticClass()));
 	}
@@ -175,6 +176,9 @@ protected:
 
 	/** When waiting for dependencies, this can be called when the wait should be cancelled, i.e. when the service user is prematurely destroyed. */
 	void StopWaitingForDependencies(const UObject* ServiceUser);
+
+	/** Can be overridden by a derived class to throw exceptions for invalid dependencies. */
+	virtual void CheckGameServiceDependencies() const {}
 
 private:
 	TArray<FOnWaitingFinished> PendingDependencyWaitCallbacks;

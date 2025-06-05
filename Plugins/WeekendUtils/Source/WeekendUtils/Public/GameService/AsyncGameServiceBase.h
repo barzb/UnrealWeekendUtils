@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2023 by Benjamin Barz and contributors. See file: CREDITS.md
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendUtils UE5 Plugin.
 ///
@@ -41,6 +41,12 @@ public:
 
 	/** Calls provided callback right after this service is fully started and running - or immediately if already running. */
 	void WaitUntilServiceIsRunning(FOnAsyncGameServiceStarted Callback);
+
+	template <typename CallbackType>
+	void WaitUntilServiceIsRunning(UObject& Caller, CallbackType Callback)
+	{
+		WaitUntilServiceIsRunning(FOnAsyncGameServiceStarted::CreateWeakLambda(&Caller, Callback));
+	}
 
 	/**
 	 * Called when the service starts to kick off the deferred starting process.

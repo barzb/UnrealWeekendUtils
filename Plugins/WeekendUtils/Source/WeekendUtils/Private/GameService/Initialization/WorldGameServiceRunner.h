@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2023 by Benjamin Barz and contributors. See file: CREDITS.md
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendUtils UE5 Plugin.
 ///
@@ -25,8 +25,8 @@ class UGameServiceConfig;
  * - Make sure all @UWorldSubsystem dependencies of configured game services are available
  * - Start all configured game services for the current world in the correct order
  * - Tick all running game services (that want to be ticked)
- * - Shutdown all running services when the world tears down
- * - Clears all registered service configs when the world tears down
+ * - Shutdown relevant running services when the world tears down
+ * - Clears relevant registered service configs when the world tears down
  */
 UCLASS()
 class UWorldGameServiceRunner : public UTickableWorldSubsystem

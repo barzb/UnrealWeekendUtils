@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2023 by Benjamin Barz and contributors. See file: CREDITS.md
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendUtils UE5 Plugin.
 ///
@@ -13,22 +13,31 @@
 
 namespace Cheats
 {
-	TArray<FCheatCommandCollection*> FCheatCommandCollection::AllCollections;
-
 	FCheatCommandCollection::FCheatCommandCollection()
 	{
-		AllCollections.AddUnique(this);
+		GetAllCollections().AddUnique(this);
 	}
 
 	FCheatCommandCollection::FCheatCommandCollection(const FCheatMenuCategorySettings& InCheatMenuSettings) :
 		CheatMenuSettings(InCheatMenuSettings)
 	{
-		AllCollections.AddUnique(this);
+		GetAllCollections().AddUnique(this);
 	}
 
-	void FCheatCommandCollection::AddCheat(ICheatCommand* CheatCommand)
+	void FCheatCommandCollection::AddCheat(ICheatMenuAction* CheatMenuAction)
 	{
-		RegisteredCheatCommands.AddUnique(CheatCommand);
+		RegisteredCheatMenuActions.AddUnique(CheatMenuAction);
+	}
+
+	void FCheatCommandCollection::RemoveCheat(ICheatMenuAction* CheatMenuAction)
+	{
+		RegisteredCheatMenuActions.Remove(CheatMenuAction);
+	}
+
+	TArray<FCheatCommandCollection*>& GetAllCollections()
+	{
+		static TArray<FCheatCommandCollection*> Collections = {};
+		return Collections;
 	}
 }
 
@@ -42,16 +51,16 @@ DEFINE_CHEAT_COLLECTION(CheatCollectionCheats)
 	{
 		TArray<FString> Lines;
 		Lines.Add("Cheat;Command;Arguments;Description"); // Header row.
-		for (const FCheatCommandCollection* CheatCollection : FCheatCommandCollection::AllCollections)
+		for (const FCheatCommandCollection* CheatCollection : GetAllCollections())
 		{
-			for (const ICheatCommand* CheatCommand : CheatCollection->GetRegisteredCheatCommands())
+			for (const ICheatMenuAction* CheatMenuAction : CheatCollection->GetRegisteredCheatMenuActions())
 			{
-				const FString Arguments = FString::JoinBy(CheatCommand->GetArgumentsInfo(), TEXT(", "), &FArgumentInfo::ToString);
+				const FString Arguments = FString::JoinBy(CheatMenuAction->GetArgumentsInfo(), TEXT(", "), &FArgumentInfo::ToString);
 				Lines.Add(FString::Printf(TEXT("\"%s\";\"%s\";\"%s\";\"%s\""),
-					*CheatCommand->GetDisplayName(),
-					*CheatCommand->GetCommandName(),
+					*CheatMenuAction->GetDisplayName(),
+					*CheatMenuAction->GetName(),
 					*Arguments,
-					*CheatCommand->GetCommandInfo()));
+					*CheatMenuAction->GetCommandInfo()));
 			}
 		}
 

@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2023 by Benjamin Barz and contributors. See file: CREDITS.md
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendUtils UE5 Plugin.
 ///
@@ -49,19 +49,14 @@ namespace GameService
 	 * @tparam ElementType Base class type of the dependencies that can be stored in this list.
 	 */
 	template<typename ElementType>
-	struct TDependencyList
+	struct TDependencyList : TArray<TSubclassOf<ElementType>>
 	{
 		template<typename T> void Add() { Add(GetDependencyUClass<T>()); }
-		void Add(const TSubclassOf<ElementType>& Element) { Elements.AddUnique(Element); }
-
 		template<typename T> bool Contains() const { return Contains(GetDependencyUClass<T>()); }
-		bool Contains(const TSubclassOf<ElementType>& Element) const { return Elements.Contains(Element); }
 
-		bool IsEmpty() const { return Elements.IsEmpty(); }
-		int32 Num() const { return Elements.Num(); }
-
-		FORCEINLINE const TArray<TSubclassOf<ElementType>>& ToArray() const { return Elements; }
-		TArray<TSubclassOf<ElementType>> Elements;
+		using TArray<TSubclassOf<ElementType>>::Add;
+		using TArray<TSubclassOf<ElementType>>::Contains;
+		using TArray<TSubclassOf<ElementType>>::operator=;
 	};
 }
 

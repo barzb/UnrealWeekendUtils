@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2023 by Benjamin Barz and contributors. See file: CREDITS.md
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendUtils UE5 Plugin.
 ///
@@ -37,7 +37,7 @@ const FText UCheatMenu::GetPaletteCategory()
 }
 #endif
 
-void UCheatMenu::HandleCheatExecuted(const ICheatCommand&, UWorld*, TArray<FString>)
+void UCheatMenu::HandleCheatExecuted(const ICheatMenuAction&, UWorld*, TArray<FString>)
 {
 	if (bShouldCloseAfterCheatExecution)
 	{

@@ -1,5 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////////////
-/// Copyright (C) 2023 by Benjamin Barz and contributors. See file: CREDITS.md
+/// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendUtils UE5 Plugin.
 ///
@@ -14,6 +14,8 @@
 #include "Components/Widget.h"
 
 #include "CheatMenu.generated.h"
+
+class ICheatMenuAction;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCheatMenuCloseRequested);
 
@@ -56,5 +58,5 @@ protected:
 #endif
 	// --
 
-	void HandleCheatExecuted(const ICheatCommand& CheatCommand, UWorld* World, TArray<FString> Args);
+	void HandleCheatExecuted(const ICheatMenuAction& CheatMenuAction, UWorld* World, TArray<FString> Args);
 };
