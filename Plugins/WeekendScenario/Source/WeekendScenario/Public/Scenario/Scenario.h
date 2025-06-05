@@ -34,6 +34,9 @@ public:
 	///////////////////////////////////////////////////////////////////////////////////////
 	/// FLOW CONTROL
 
+	UFUNCTION(BlueprintCallable)
+	void RestartAtEntryPoint(FGameplayTag EntryPoint);
+
 	TArray<UScenario*> GetRunningSubScenarios() const;
 	int32 GetNumRunningSubScenarios() const;
 

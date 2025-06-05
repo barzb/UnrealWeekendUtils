@@ -80,7 +80,9 @@ FString UAsyncScenarioTask::GetDebugString() const
 		case EGameplayTaskState::Paused:
 			return FString::Printf(TEXT("Paused (%.1fs)"), GetRuntime());
 		case EGameplayTaskState::Finished:
-			return FString::Printf(TEXT("Completed (%s)"), *GetResultTagAsShortString(CompletionResult));
+			return CompletionResult.IsValid()
+				? FString::Printf(TEXT("Completed (%s)"), *GetResultTagAsShortString(CompletionResult))
+				: FString("Completed");
 		default: return "";
 	}
 }
@@ -148,11 +150,17 @@ void UAsyncScenarioTask::OnDestroy(bool bHasOwnerFinished)
 	if (const UWorld* World = GetWorld())
 	{
 		TaskEndTime = World->GetTimeSeconds();
+		UAsyncScenarioTaskDebuggingContext::Get(World)->UnlinkAsyncTask(this);
+	}
+
+	TaskState = EGameplayTaskState::Finished;
+
+	if (bHasOwnerFinished)
+	{
+		ReceiveCancelled();
 	}
 
 	Cleanup();
-
-	TaskState = EGameplayTaskState::Finished;
 
 	if (TaskOwner.IsValid())
 	{
@@ -163,6 +171,11 @@ void UAsyncScenarioTask::OnDestroy(bool bHasOwnerFinished)
 	{
 		MarkAsGarbage();
 	}
+}
+
+void UAsyncScenarioTask::Cancel()
+{
+	TaskOwnerEnded();
 }
 
 void UAsyncScenarioTask::Cleanup()
@@ -203,3 +216,41 @@ void UAsyncScenarioTask::Complete(FGameplayTag Result)
 void UAsyncScenarioTask::ReceiveStart_Implementation() {}
 void UAsyncScenarioTask::ReceiveStartAtEntryPoint_Implementation(FGameplayTag EntryPoint) {}
 void UAsyncScenarioTask::ReceiveComplete_Implementation(const FGameplayTag& Result) {}
+void UAsyncScenarioTask::ReceiveCancelled_Implementation() {}
+
+///////////////////////////////////////////////////////////////////////////////////////
+
+void UAsyncScenarioTaskDebuggingContext::LinkAsyncTaskToBlueprintNode(UAsyncScenarioTask* Task, FGuid BlueprintNodeId)
+{
+#if WITH_EDITOR
+	if (const UWorld* World = Task ? Task->GetWorld() : nullptr)
+	{
+		Get(World)->Registry.FindOrAdd(BlueprintNodeId) = Task;
+	}
+#endif
+}
+
+UAsyncScenarioTask* UAsyncScenarioTaskDebuggingContext::FindAsyncTaskByBlueprintNodeId(const FGuid& BlueprintNodeId)
+{
+#if WITH_EDITOR
+	const auto* FoundTask = Registry.Find(BlueprintNodeId);
+	return FoundTask ? FoundTask->Get() : nullptr;
+#else
+	return nullptr;
+#endif
+}
+
+void UAsyncScenarioTaskDebuggingContext::UnlinkAsyncTask(UAsyncScenarioTask* Task)
+{
+#if WITH_EDITOR
+	if (const FGuid* FoundKey = Registry.FindKey(Task))
+	{
+		Registry.Remove(*FoundKey);
+	}
+#endif
+}
+
+UAsyncScenarioTaskDebuggingContext* UAsyncScenarioTaskDebuggingContext::Get(const UWorld* World)
+{
+	return UWorld::GetSubsystem<UAsyncScenarioTaskDebuggingContext>(World);
+}

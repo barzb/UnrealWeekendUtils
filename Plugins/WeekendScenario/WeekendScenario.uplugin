@@ -12,7 +12,7 @@
 	"SupportURL": "https://github.com/barzb/UnrealWeekendUtils",
 	"CanContainContent": true,
 	"IsBetaVersion": false,
-	"IsExperimentalVersion": false,
+	"IsExperimentalVersion": true,
 	"Installed": false,
 	"Modules": [
 		{
@@ -29,10 +29,6 @@
 	"Plugins": [
 		{
 			"Name": "WeekendUtils",
-			"Enabled": true
-		},
-		{
-			"Name": "StructUtils",
 			"Enabled": true
 		}
 	]

@@ -61,8 +61,7 @@ FString UScenarioTask_WaitForScenarioTags::GetDebugString() const
 void UScenarioTask_WaitForScenarioTags::CheckScenarioTagsRequirement()
 {
 	FGameplayTagContainer ScenarioTags;
-	UseGameService<UScenarioService>(this)
-	.GetScenarioTagsProvider()->GetOwnedGameplayTags(OUT ScenarioTags);
+	UseGameService<UScenarioService>(this).GetScenarioTagsProvider()->GetOwnedGameplayTags(OUT ScenarioTags);
 
 	if (TagsQuery.Matches(ScenarioTags))
 	{

@@ -59,6 +59,15 @@ UScenario* UScenario::RunScenario(UScenario* TaskOwner, TSubclassOf<UScenario> C
 	return NewScenarioTask<UScenario>(*TaskOwner, Class, TaskName);
 }
 
+void UScenario::RestartAtEntryPoint(FGameplayTag EntryPoint)
+{
+	ReceiveCancelled();
+
+	Cleanup();
+
+	ReceiveStartAtEntryPoint(EntryPoint);
+}
+
 TArray<UScenario*> UScenario::GetRunningSubScenarios() const
 {
 	TArray<UScenario*> SubScenarios;

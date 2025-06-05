@@ -16,6 +16,8 @@
 
 #include "ScenarioBlueprintFunctionLibrary.generated.h"
 
+class UScenario;
+
 /**
  * #todo-docs
  */
@@ -27,6 +29,4 @@ class WEEKENDSCENARIO_API UScenarioBlueprintFunctionLibrary : public UBlueprintF
 public:
 	UFUNCTION(BlueprintCallable, Category = "Scenario", meta = (ExpandEnumAsExecs = "ReturnValue"))
 	static ECommonValidity GetGameScenarioTags(FGameplayTagContainer& OutTags);
-
-	//#todo-tasks add AsyncWaitForScenarioTag task
 };

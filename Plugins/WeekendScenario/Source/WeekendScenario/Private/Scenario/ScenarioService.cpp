@@ -9,11 +9,10 @@
 
 #include "Scenario/ScenarioService.h"
 
-#include "SaveGame/SaveGameService.h"
 #include "Scenario/Scenario.h"
 #include "Settings/ScenarioProjectSettings.h"
 
-UScenario& UScenarioService::RunScenario(const TSubclassOf<UScenario>& ScenarioClass, FName TaskName)
+UScenario* UScenarioService::RunScenario(TSubclassOf<UScenario> ScenarioClass, FName TaskName)
 {
 	check(ScenarioClass != nullptr);
 	check(IsValid(ScenarioTasksComponent));
@@ -24,7 +23,7 @@ UScenario& UScenarioService::RunScenario(const TSubclassOf<UScenario>& ScenarioC
 	//NewScenario->OnCompleted.AddDynamic(this, &ThisClass::HandleScenarioCompletion, NewScenario);
 	NewScenario->ReadyForActivation();
 
-	return *NewScenario;
+	return NewScenario;
 }
 
 IGameplayTagAssetInterface* UScenarioService::GetScenarioTagsProvider() const
@@ -88,6 +87,11 @@ void UScenarioService::ShutdownService()
 FActiveScenarioTaskData UScenarioService::SummonScenarioTaskData(const UAsyncScenarioTask& ScenarioTask) const
 {
 	return CurrentState->ScenarioTaskStates.FindOrAdd(ScenarioTask.GetPathName());
+}
+
+UScenario* UScenarioService::GetFirstRunningScenario() const
+{
+	return RunningScenarios.IsEmpty() ? nullptr : RunningScenarios[0];
 }
 
 void UScenarioService::SpawnScenarioServiceActor()

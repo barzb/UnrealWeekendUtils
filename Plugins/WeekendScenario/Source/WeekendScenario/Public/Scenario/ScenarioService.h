@@ -28,13 +28,14 @@ class USaveGameService;
  * If the previous map has some sort of scenario selection, the selected Scenario
  * could be passed as travel option and then received in InitGame(Options).
  */
-UCLASS()
+UCLASS(BlueprintType)
 class WEEKENDSCENARIO_API UScenarioService : public URestorableGameServiceBase
 {
 	GENERATED_BODY()
 
 public:
-	UScenario& RunScenario(const TSubclassOf<UScenario>& ScenarioClass, FName TaskName = NAME_None);
+	UFUNCTION(BlueprintCallable)
+	UScenario* RunScenario(TSubclassOf<UScenario> ScenarioClass, FName TaskName = NAME_None);
 
 	UScenarioTasksComponent* GetScenarioTasksComponent() const { return ScenarioTasksComponent; }
 	IGameplayTagAssetInterface* GetScenarioTagsProvider() const;
@@ -49,6 +50,8 @@ public:
 
 	//#todo-scenario
 	FActiveScenarioTaskData SummonScenarioTaskData(const UAsyncScenarioTask& ScenarioTask) const;
+
+	UScenario* GetFirstRunningScenario() const;
 
 protected:
 	///////////////////////////////////////////////////////////////////////////////////////

@@ -107,14 +107,11 @@ bool UK2Node_AsyncScenarioTask::ShouldBranchResultTag() const
 
 UAsyncScenarioTask* UK2Node_AsyncScenarioTask::FindSubtaskSpawnedByThisNode(const UAsyncScenarioTask& OwningTask) const
 {
-	for (UGameplayTask* Task : OwningTask.ChildTasks)
-	{
-		UAsyncScenarioTask* ScenarioTask = Cast<UAsyncScenarioTask>(Task);
-		if (IsValid(ScenarioTask) && ScenarioTask->BlueprintNodeThatSpawnedThisTask.Get(FGuid()) == NodeGuid)
-			return ScenarioTask;
-	}
+	UAsyncScenarioTask* TaskSpawnedByThisNode = UAsyncScenarioTaskDebuggingContext::Get(OwningTask.GetWorld())->FindAsyncTaskByBlueprintNodeId(NodeGuid);
+	if (!TaskSpawnedByThisNode || !OwningTask.GetActiveChildTasks().Contains(TaskSpawnedByThisNode))
+		return nullptr;
 
-	return nullptr;
+	return TaskSpawnedByThisNode;
 }
 
 void UK2Node_AsyncScenarioTask::GetMenuActions(FBlueprintActionDatabaseRegistrar& ActionRegistrar) const
@@ -174,6 +171,14 @@ FText UK2Node_AsyncScenarioTask::GetNodeTitle(ENodeTitleType::Type TitleType) co
 		Title = FText::Format(INVTEXT("{0}: {1}"), Title, DisplayName);
 	}
 	return Title;
+}
+
+FLinearColor UK2Node_AsyncScenarioTask::GetNodeTitleColor() const
+{
+	if (HasScenarioTaskClassPin())
+		return FLinearColor(0.0f, 0.55f, 0.62f);
+
+	return Super::GetNodeTitleColor();
 }
 
 UObject* UK2Node_AsyncScenarioTask::GetJumpTargetForDoubleClick() const
@@ -351,28 +356,10 @@ void UK2Node_AsyncScenarioTask::AllocateDefaultPins()
 
 void UK2Node_AsyncScenarioTask::ExpandNode(FKismetCompilerContext& CompilerContext, UEdGraph* SourceGraph)
 {
-	const UEdGraphPin* FactoryTaskClassInputPin = GetScenarioTaskClassPin();
-	if (!FactoryTaskClassInputPin)
-	{
-		// Link the spawned task object to this node, mostly for the popup messages to know which node the task belongs to:
-		/*{
-			UK2Node_CallFunction* LinkToThisNodeCall = CompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, SourceGraph);
-			LinkToThisNodeCall->FunctionReference.SetExternalMember(GET_MEMBER_NAME_CHECKED(UK2Node_AsyncScenarioTask, LinkScenarioTaskToSpawningBlueprintNode), StaticClass());
-			LinkToThisNodeCall->AllocateDefaultPins();
-			LinkToThisNodeCall->FindPinChecked(TEXT("OriginNodeGuid"), EGPD_Input)->DefaultValue = NodeGuid.ToString();
-			UEdGraphPin* TaskInputPin = LinkToThisNodeCall->FindPinChecked(TEXT("SpawnedTask"), EGPD_Input);
-			bIsErrorFree &= Schema->TryCreateConnection(FactoryMethodScenarioTaskOutPin, TaskInputPin);
-			bIsErrorFree &= Schema->TryCreateConnection(LastThenPin, LinkToThisNodeCall->GetExecPin());
-			LastThenPin = LinkToThisNodeCall->GetThenPin();
-		}*/
-
-		Super::ExpandNode(CompilerContext, SourceGraph);
-		return;
-	}
-
-	UK2Node::ExpandNode(CompilerContext, SourceGraph);
 	const UEdGraphSchema_K2* Schema = CompilerContext.GetSchema();
 	check(SourceGraph && Schema);
+
+	UK2Node::ExpandNode(CompilerContext, SourceGraph);
 	bool bIsErrorFree = true;
 
 	// ------------------------------------------------------------------------------------------
@@ -418,10 +405,10 @@ void UK2Node_AsyncScenarioTask::ExpandNode(FKismetCompilerContext& CompilerConte
 	// Link the spawned task object to this node, mostly for the popup messages to know which node the task belongs to:
 	{
 		UK2Node_CallFunction* LinkToThisNodeCall = CompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, SourceGraph);
-		LinkToThisNodeCall->FunctionReference.SetExternalMember(GET_MEMBER_NAME_CHECKED(UK2Node_AsyncScenarioTask, LinkScenarioTaskToSpawningBlueprintNode), StaticClass());
+		LinkToThisNodeCall->FunctionReference.SetExternalMember(GET_MEMBER_NAME_CHECKED(UAsyncScenarioTaskDebuggingContext, LinkAsyncTaskToBlueprintNode), UAsyncScenarioTaskDebuggingContext::StaticClass());
 		LinkToThisNodeCall->AllocateDefaultPins();
-		LinkToThisNodeCall->FindPinChecked(TEXT("OriginNodeGuid"), EGPD_Input)->DefaultValue = NodeGuid.ToString();
-		UEdGraphPin* TaskInputPin = LinkToThisNodeCall->FindPinChecked(TEXT("SpawnedTask"), EGPD_Input);
+		LinkToThisNodeCall->FindPinChecked(TEXT("BlueprintNodeId"), EGPD_Input)->DefaultValue = NodeGuid.ToString();
+		UEdGraphPin* TaskInputPin = LinkToThisNodeCall->FindPinChecked(TEXT("Task"), EGPD_Input);
 		bIsErrorFree &= Schema->TryCreateConnection(FactoryMethodScenarioTaskOutPin, TaskInputPin);
 		bIsErrorFree &= Schema->TryCreateConnection(LastThenPin, LinkToThisNodeCall->GetExecPin());
 		LastThenPin = LinkToThisNodeCall->GetThenPin();
@@ -536,7 +523,7 @@ bool UK2Node_AsyncScenarioTask::TryExpandMulticastDelegatePropertyAsExecOutputPi
 
 	bool bIsErrorFree = true;
 	const UEdGraphSchema_K2* Schema = CompilerContext.GetSchema();
-	UK2Node_CustomEvent* CustomEventNode = CompilerContext.SpawnIntermediateEventNode<UK2Node_CustomEvent>(this, DelegatePropertyPin, SourceGraph);
+	UK2Node_CustomEvent* CustomEventNode = CompilerContext.SpawnIntermediateNode<UK2Node_CustomEvent>(this, SourceGraph);
 	{
 		UK2Node_AddDelegate* AddDelegateNode = CompilerContext.SpawnIntermediateNode<UK2Node_AddDelegate>(this, SourceGraph);
 		AddDelegateNode->SetFromProperty(&DelegateProperty, false, DelegateProperty.GetOwnerClass());
@@ -604,9 +591,4 @@ bool UK2Node_AsyncScenarioTask::TryExpandMulticastDelegatePropertyAsExecOutputPi
 	}
 
 	return false;
-}
-
-void UK2Node_AsyncScenarioTask::LinkScenarioTaskToSpawningBlueprintNode(FString OriginNodeGuid, UAsyncScenarioTask* SpawnedTask)
-{
-	SpawnedTask->BlueprintNodeThatSpawnedThisTask = FGuid(OriginNodeGuid);
 }

@@ -147,6 +147,7 @@ protected:
 	virtual void OnDestroy(bool bHasOwnerFinished) override;
 	// --
 
+	virtual void Cancel();
 	virtual void Cleanup();
 
 	UScenarioService& UseScenarioService() const;
@@ -166,7 +167,29 @@ protected:
 	UFUNCTION(BlueprintNativeEvent, meta = (BlueprintProtected, DisplayName = "Complete"))
 	void ReceiveComplete(const FGameplayTag& Result);
 
+	UFUNCTION(BlueprintNativeEvent, meta = (BlueprintProtected, DisplayName = "Cancel"))
+	void ReceiveCancelled();
+};
+
+///////////////////////////////////////////////////////////////////////////////////////
+
+UCLASS(BlueprintInternalUseOnly)
+class WEEKENDSCENARIO_API UAsyncScenarioTaskDebuggingContext final : public UWorldSubsystem
+{
+	GENERATED_BODY()
+
+public:
+	static UAsyncScenarioTaskDebuggingContext* Get(const UWorld* World);
+
+	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = true))
+	static void LinkAsyncTaskToBlueprintNode(UAsyncScenarioTask* Task, FGuid BlueprintNodeId);
+
+	UAsyncScenarioTask* FindAsyncTaskByBlueprintNodeId(const FGuid& BlueprintNodeId);
+	
+	void UnlinkAsyncTask(UAsyncScenarioTask* Task);
+
 private:
-	friend class UK2Node_AsyncScenarioTask;
-	TOptional<FGuid> BlueprintNodeThatSpawnedThisTask = {};
+#if WITH_EDITOR
+	TMap<FGuid, TWeakObjectPtr<UAsyncScenarioTask>> Registry;
+#endif
 };

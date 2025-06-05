@@ -61,6 +61,7 @@ protected:
 	virtual void GetMenuActions(FBlueprintActionDatabaseRegistrar& ActionRegistrar) const override;
 	virtual FText GetTooltipText() const override;
 	virtual FText GetNodeTitle(ENodeTitleType::Type TitleType) const override;
+	virtual FLinearColor GetNodeTitleColor() const override;
 	virtual UObject* GetJumpTargetForDoubleClick() const override;
 	virtual bool IsCompatibleWithGraph(UEdGraph const* TargetGraph) const override;
 	virtual void ValidateNodeDuringCompilation(class FCompilerResultsLog& MessageLog) const override;
@@ -75,8 +76,4 @@ protected:
 	virtual bool TryExpandMulticastDelegatePropertyAsExecOutputPin(
 		FMulticastDelegateProperty& DelegateProperty, UEdGraphPin* DelegatePropertyPin, const TArray<FBaseAsyncTaskHelper::FOutputPinAndLocalVariable>& TempVarOutputs,
 		UEdGraphPin* ProxyObjectPin, UEdGraphPin*& InOutLastThenPin, UEdGraph* SourceGraph, FKismetCompilerContext& CompilerContext);
-
-private:
-	UFUNCTION(BlueprintCallable)
-	static void LinkScenarioTaskToSpawningBlueprintNode(FString OriginNodeGuid, UAsyncScenarioTask* SpawnedTask);
 };
