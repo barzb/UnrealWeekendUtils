@@ -43,10 +43,6 @@
 		{
 			"Name": "ModelViewViewModel",
 			"Enabled": true
-		},
-		{
-			"Name": "StructUtils",
-			"Enabled": true
 		}
 	]
 }
