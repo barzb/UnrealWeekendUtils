@@ -95,7 +95,7 @@ public:
 	// --
 
 protected:
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "Weekend Utils|Save Game")
 	TSet<FString> SaveSlotNames;
 
 	virtual void HandlePreloadCompleted(USaveGameService& SaveGameService, const TSet<USaveGame*>& SaveGames);

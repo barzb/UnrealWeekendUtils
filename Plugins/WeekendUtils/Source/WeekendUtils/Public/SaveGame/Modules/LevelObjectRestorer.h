@@ -23,7 +23,7 @@ struct WEEKENDUTILS_API FLevelObjectSaveGameState
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(SaveGame, VisibleAnywhere)
+	UPROPERTY(SaveGame, VisibleAnywhere, Category = "Weekend Utils|Save Game")
 	int32 ByteDataSize = 0;
 
 	UPROPERTY(SaveGame)
@@ -74,14 +74,14 @@ public:
 	// --
 
 protected:
-	UPROPERTY(Transient, VisibleAnywhere, meta = (DisplayThumbnail = "false"))
+	UPROPERTY(Transient, VisibleAnywhere, meta = (DisplayThumbnail = "false"), Category = "Weekend Utils|Save Game")
 	TSet<TWeakObjectPtr<UObject>> SimpleRegisteredObjects = {};
-	UPROPERTY(Transient, VisibleAnywhere, meta = (DisplayThumbnail = "false"))
+	UPROPERTY(Transient, VisibleAnywhere, meta = (DisplayThumbnail = "false"), Category = "Weekend Utils|Save Game")
 	TSet<TWeakObjectPtr<UObject>> RegisteredObjectsWithTransform = {};
-	UPROPERTY(Transient, VisibleAnywhere, meta = (DisplayThumbnail = "false"))
+	UPROPERTY(Transient, VisibleAnywhere, meta = (DisplayThumbnail = "false"), Category = "Weekend Utils|Save Game")
 	TMap<TWeakObjectPtr<UObject>, FString> UniqueIdsOfRegisteredObjects = {};
 
-	UPROPERTY(SaveGame, VisibleAnywhere)
+	UPROPERTY(SaveGame, VisibleAnywhere, Category = "Weekend Utils|Save Game")
 	TMap<FString, FLevelObjectSaveGameState> ObjectStates;
 
 	virtual void SaveObjectToState(UObject& Object, bool bSaveTransform, FLevelObjectSaveGameState& InOutState) const;

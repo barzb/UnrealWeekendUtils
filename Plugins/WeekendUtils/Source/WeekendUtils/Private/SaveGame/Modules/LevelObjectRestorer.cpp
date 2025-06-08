@@ -9,6 +9,9 @@
 
 #include "SaveGame/Modules/LevelObjectRestorer.h"
 
+#include "Engine/World.h"
+#include "Serialization/MemoryReader.h"
+#include "Serialization/MemoryWriter.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 
 namespace
@@ -17,7 +20,7 @@ namespace
 	{
 		checkf(IsValid(&Object),
 			TEXT("USaveGameModule_LevelObjects: Invalid object: %s"), *GetNameSafe(&Object));
-		checkf(Object.GetWorld() && Object.GetWorld()->IsGameWorld() && Object.IsInOuter(Object.GetWorld()),
+		checkf(Object.GetWorld() && Object.GetWorld()->IsGameWorld(),
 			TEXT("USaveGameModule_LevelObjects: Non-level-objects are not supported: %s"), *GetNameSafe(&Object));
 		checkf(!Object.HasAnyFlags(RF_ArchetypeObject | RF_ClassDefaultObject),
 			TEXT("USaveGameModule_LevelObjects: CDO objects are not supported: %s"), *GetNameSafe(&Object));
@@ -40,6 +43,11 @@ void ULevelObjectRestorer::RegisterLevelObject(UObject& Object, TOptional<FStrin
 	{
 		RestoreObjectFromState(ObjectStates[ObjectId], false, IN OUT Object);
 	}
+	else
+	{
+		FLevelObjectSaveGameState& State = ObjectStates.FindOrAdd(ObjectId);
+		SaveObjectToState(Object, false, IN OUT State);
+	}
 }
 
 void ULevelObjectRestorer::RegisterLevelObjectWithTransform(AActor& Actor, TOptional<FString> CustomUniqueObjectId, bool bImmediatelyRestoreIfPossible)
@@ -56,6 +64,11 @@ void ULevelObjectRestorer::RegisterLevelObjectWithTransform(AActor& Actor, TOpti
 	{
 		RestoreObjectFromState(ObjectStates[ObjectId], true, IN OUT Actor);
 	}
+	else
+	{
+		FLevelObjectSaveGameState& State = ObjectStates.FindOrAdd(ObjectId);
+		SaveObjectToState(Actor, true, IN OUT State);
+	}
 }
 
 void ULevelObjectRestorer::RegisterLevelObjectWithTransform(USceneComponent& SceneComponent, TOptional<FString> CustomUniqueObjectId, bool bImmediatelyRestoreIfPossible)
@@ -71,6 +84,11 @@ void ULevelObjectRestorer::RegisterLevelObjectWithTransform(USceneComponent& Sce
 	if (bImmediatelyRestoreIfPossible && ObjectStates.Contains(ObjectId))
 	{
 		RestoreObjectFromState(ObjectStates[ObjectId], true, IN OUT SceneComponent);
+	}
+	else
+	{
+		FLevelObjectSaveGameState& State = ObjectStates.FindOrAdd(ObjectId);
+		SaveObjectToState(SceneComponent, true, IN OUT State);
 	}
 }
 

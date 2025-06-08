@@ -29,19 +29,19 @@ class WEEKENDUTILS_API UCurrentSaveGameViewModel : public UMVVMViewModelBase,
 public:
 	UCurrentSaveGameViewModel();
 
-	UPROPERTY(FieldNotify, BlueprintReadOnly)
+	UPROPERTY(FieldNotify, BlueprintReadOnly, Category = "Weekend Utils|Save Game")
 	bool bCanContinue = false;
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game")
 	virtual void BeginUsage();
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game")
 	virtual void EndUsage();
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game")
 	virtual void ContinueSaveGame();
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game")
 	virtual void CreateNewGame();
 
 	// - UObject

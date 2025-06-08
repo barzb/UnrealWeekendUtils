@@ -11,6 +11,7 @@
 
 #include "CoreMinimal.h"
 #include "InstancedStruct.h"
+#include "StructUtils/InstancedStruct.h"
 #include "UObject/Object.h"
 
 #include "SaveGameEditor.generated.h"
@@ -27,11 +28,11 @@ class WEEKENDUTILS_API USaveGameEditor : public UObject
 
 public:
 	/** Opens the SaveGameEditor window for passed SaveGame object. */
-	UFUNCTION(BlueprintCallable, Category = "SaveLoad|Editor", meta = (DevelopmentOnly))
+	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game|Editor", meta = (DevelopmentOnly))
 	static void OpenSaveGameEditor(const USaveGame* SaveGame);
 
 	/** Opens the SaveGameEditor window for the currently active SaveGame object. */
-	UFUNCTION(BlueprintCallable, Category = "SaveLoad|Editor", meta = (DevelopmentOnly))
+	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game|Editor", meta = (DevelopmentOnly))
 	static void OpenSaveGameEditorForCurrentSaveGame();
 
 protected:
@@ -53,10 +54,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, Transient, Category = "Editor")
 	FString EditorInfo = FString();
 
-	UPROPERTY(Instanced, VisibleAnywhere, Transient, Category = "SaveGame")
+	UPROPERTY(Instanced, VisibleAnywhere, Transient, Category = "Save Game", meta = (ShowOnlyInnerProperties))
 	TObjectPtr<const USaveGame> SaveGame = nullptr;
 
-	UPROPERTY(VisibleAnywhere, Transient, Category = "SaveGame")
+	UPROPERTY(VisibleAnywhere, Transient, Category = "Save Game")
 	FInstancedStruct HeaderData = FInstancedStruct();
 #endif
 };

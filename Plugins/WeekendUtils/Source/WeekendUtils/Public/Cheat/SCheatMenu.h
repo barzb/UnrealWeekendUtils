@@ -15,6 +15,9 @@
 #include "Widgets/Layout/SWrapBox.h"
 #include "Widgets/SCompoundWidget.h"
 
+class STextBlock;
+class SVerticalBox;
+
 DECLARE_DELEGATE_ThreeParams(FOnCheatExecuted, const ICheatMenuAction&, UWorld*, TArray<FString>);
 
 class WEEKENDUTILS_API SCheatMenu : public SCompoundWidget
@@ -25,7 +28,10 @@ public:
 		SLATE_EVENT(FOnCheatExecuted, OnCheatExecuted)
 	SLATE_END_ARGS()
 
+	// - SCompoundWidget
 	virtual ~SCheatMenu() override;
+	virtual bool SupportsKeyboardFocus() const override;
+	// --
 
 	void Construct(const FArguments& InArgs);
 

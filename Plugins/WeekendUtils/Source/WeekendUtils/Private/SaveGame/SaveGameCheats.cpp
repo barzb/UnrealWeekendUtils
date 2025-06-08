@@ -12,7 +12,7 @@
 #include "SaveGame/SaveGameService.h"
 #include "SaveGame/SaveGameEditor.h"
 
-DEFINE_CHEAT_COLLECTION(WeekendSaveGameCheats, AsCheatMenuTab("Save Game"))
+DEFINE_CHEAT_COLLECTION(WeekendSaveGameCheats, AsCheatMenuTab("Save/Load"))
 {
 	DEFINE_CHEAT_COMMAND(AutosaveCheat, "Cheat.SaveGame.Autosave")
 	.DisplayAs("Autosave")

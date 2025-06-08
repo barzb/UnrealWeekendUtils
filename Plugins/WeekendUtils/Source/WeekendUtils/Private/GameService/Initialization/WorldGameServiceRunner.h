@@ -36,6 +36,7 @@ class UWorldGameServiceRunner : public UTickableWorldSubsystem
 public:
 	// - UTickableWorldSubsystem
 	virtual bool DoesSupportWorldType(const EWorldType::Type WorldType) const override;
+	virtual bool ShouldCreateSubsystem(UObject* Outer) const override;
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Tick(float DeltaTime) override;
 	virtual TStatId GetStatId() const override;

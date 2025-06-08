@@ -37,7 +37,8 @@ void USaveGameListViewModel::Update()
 	const bool bCanLoad = AllowsLoadingFromWidget();
 
 	TObjectListSynchronizer(Slots, SlotsNames)
-	.ForEachMissingElement([this, bCanSave, bCanLoad](const FSlotName& SlotName) -> USaveGameSlotViewModel* {
+	.ForEachMissingElement([this, bCanSave, bCanLoad](const FSlotName& SlotName) -> USaveGameSlotViewModel*
+	{
 		USaveGameSlotViewModel* NewViewModel = NewObject<USaveGameSlotViewModel>(this, SlotViewModelClass);
 		NewViewModel->OnSaveRequested.BindUObject(this, &ThisClass::HandleSaveRequestBySlot);
 		NewViewModel->OnLoadRequested.BindUObject(this, &ThisClass::HandleLoadRequestBySlot);

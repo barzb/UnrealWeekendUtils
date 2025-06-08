@@ -39,6 +39,12 @@ bool UWorldGameServiceRunner::DoesSupportWorldType(const EWorldType::Type WorldT
 	}
 }
 
+bool UWorldGameServiceRunner::ShouldCreateSubsystem(UObject* Outer) const
+{
+	// Do not start services for the dummy world that gets initialized on engine startup:
+	return Super::ShouldCreateSubsystem(Outer) && Outer->HasAnyFlags(RF_WasLoaded);
+}
+
 void UWorldGameServiceRunner::Initialize(FSubsystemCollectionBase& Collection)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UWorldGameServiceRunner.Initialize"), STAT_WorldGameServiceRunner_Initialize, STATGROUP_GameService);

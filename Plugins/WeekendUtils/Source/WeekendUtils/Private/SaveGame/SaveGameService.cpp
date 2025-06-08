@@ -195,7 +195,7 @@ bool USaveGameService::TryLoadCurrentSaveGameFromSlotSynchronous(const FSlotName
 	SetStatus(EStatus::Loading);
 
 	USaveGame* LoadedSaveGame = PerformSyncLoad(SlotName);
-	CurrentSaveGame = FCurrentSaveGame::CreateFromLoadedGame(*LoadedSaveGame, SlotName);
+	SetCurrentSaveGame(FCurrentSaveGame::CreateFromLoadedGame(*LoadedSaveGame, SlotName));
 
 	SetStatus(EStatus::Idle);
 	AddDebugEntry("[TryLoadCurrentSaveGameFromSlotSynchronous] " + SlotName);
@@ -292,17 +292,13 @@ void USaveGameService::RestoreAsCurrentSaveGame(USaveGame& SaveGame, TOptional<F
 	}
 
 	AddDebugEntry("[RestoreAsCurrentSaveGame]");
-	CurrentSaveGame = FCurrentSaveGame::CreateFromLoadedGame(SaveGame, LoadedFromSlotName);
+	SetCurrentSaveGame(FCurrentSaveGame::CreateFromLoadedGame(SaveGame, LoadedFromSlotName));
 	OnAfterRestored.Broadcast(CurrentSaveGame);
 }
 
 void USaveGameService::RestoreAsAndTravelIntoCurrentSaveGame(USaveGame& SaveGame, TOptional<FSlotName> LoadedFromSlotName)
 {
-	if (CurrentSaveGame != SaveGame)
-	{
-		RestoreAsCurrentSaveGame(SaveGame, LoadedFromSlotName);
-	}
-
+	RestoreAsCurrentSaveGame(SaveGame, LoadedFromSlotName);
 	TryTravelIntoCurrentSaveGame();
 }
 
@@ -319,11 +315,18 @@ bool USaveGameService::TryTravelIntoCurrentSaveGame()
 	return true;
 }
 
+void USaveGameService::CreateNewSaveGameAsCurrent()
+{
+	AddDebugEntry("[CreateNewSaveGameAsCurrent]");
+	USaveGame& SaveGameObject = SaveLoadBehavior->CreateNewSavegameObject(*this);
+	SetCurrentSaveGame(FCurrentSaveGame::CreateFromNewGame(SaveGameObject));
+}
+
 void USaveGameService::CreateAndRestoreNewSaveGameAsCurrent()
 {
 	AddDebugEntry("[CreateAndRestoreNewSaveGameAsCurrent]");
 	USaveGame& SaveGameObject = SaveLoadBehavior->CreateNewSavegameObject(*this);
-	CurrentSaveGame = FCurrentSaveGame::CreateFromNewGame(SaveGameObject);
+	SetCurrentSaveGame(FCurrentSaveGame::CreateFromNewGame(SaveGameObject));
 	OnAfterRestored.Broadcast(CurrentSaveGame);
 }
 
@@ -456,6 +459,13 @@ bool USaveGameService::IsBusySaving() const
 bool USaveGameService::IsBusySavingOrLoading() const
 {
 	return (IsBusyLoading() || IsBusySaving());
+}
+
+void USaveGameService::SetCurrentSaveGame(const FCurrentSaveGame& NewCurrentSaveGame)
+{
+	OnBeforeCurrentSaveGameChanged.Broadcast(CurrentSaveGame);
+	CurrentSaveGame = NewCurrentSaveGame;
+	OnAfterCurrentSaveGameChanged.Broadcast(CurrentSaveGame);
 }
 
 USaveLoadBehavior& USaveGameService::CreateSaveLoadBehavior(const USaveGameServiceSettings& Settings)
@@ -670,10 +680,16 @@ void USaveGameService::PerformAsyncSave(const FSlotName& SlotName)
 
 	SetStatus(EStatus::Saving);
 
+	if (CachedSaveGames.Num() > 0 && !CachedSaveGames.Contains(SlotName))
+	{
+		CreateNewSaveGameAsCurrent();
+	}
+
 	// Last chance to populate the save game with data:
 	OnBeforeSaved.Broadcast(CurrentSaveGame);
 
 	CachedSaveGames.Add(SlotName, TStrongObjectPtr(CurrentSaveGame.GetMutablePtr()));
+	OnAvailableSaveGamesChanged.Broadcast();
 	SaveGameSerializer->AsyncSaveGameToSlot(CurrentSaveGame.GetRef(), SlotName, UserIndex,
 		USaveGameSerializer::FOnAsyncSaveCompleted::CreateUObject(this, &ThisClass::HandleAsyncSaveCompleted));
 }
@@ -747,6 +763,7 @@ void USaveGameService::UpdateSaveLockForLevel(UWorld* NewWorld)
 	if (bIsSavingAllowed)
 	{
 		UnlockSaving(*CurrentLevelSaveLock);
+		CurrentLevelSaveLock.Reset();
 	}
 	else
 	{

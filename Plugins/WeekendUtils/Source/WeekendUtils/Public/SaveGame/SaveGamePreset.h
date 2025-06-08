@@ -30,25 +30,25 @@ class WEEKENDUTILS_API USaveGamePreset : public UDataAsset
 public:
 	using FSlotName = FString;
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "Weekend Utils|Save Game")
 	bool bIsEditorOnly = false;
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "Weekend Utils|Save Game")
 	bool bIsDeveloperOnly = true;
 
 	/** Pretends to be a SaveGame slot, so it should be unique across other presets. */
-	UPROPERTY(EditDefaultsOnly, NoClear)
+	UPROPERTY(EditDefaultsOnly, NoClear, Category = "Weekend Utils|Save Game")
 	FString PresetName = FString();
 
-	UPROPERTY(EditDefaultsOnly, meta = (ExcludeBaseStruct, BaseStruct = "/Script/WeekendUtils.SaveGameHeaderDataBase"))
+	UPROPERTY(EditDefaultsOnly, meta = (ExcludeBaseStruct, BaseStruct = "/Script/WeekendUtils.SaveGameHeaderDataBase"), Category = "Weekend Utils|Save Game")
 	FInstancedStruct HeaderData;
 
-	UPROPERTY(Instanced, EditDefaultsOnly, NoClear, meta = (ShowOnlyInnerProperties))
+	UPROPERTY(Instanced, EditDefaultsOnly, NoClear, meta = (ShowOnlyInnerProperties), Category = "Weekend Utils|Save Game")
 	TObjectPtr<const USaveGame> SaveGame;
 
 	USaveGamePreset();
 
-	UFUNCTION(BlueprintCallable, Category = "SaveLoad|Editor", meta = (DevelopmentOnly))
+	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game", meta = (DevelopmentOnly))
 	static void OpenSaveGamePresetsFolder();
 
 	/** Scans for available presets that match the current build environment. */

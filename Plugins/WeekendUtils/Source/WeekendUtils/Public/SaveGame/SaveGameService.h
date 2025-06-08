@@ -75,6 +75,14 @@ public:
 	DECLARE_MULTICAST_DELEGATE(FOnAvailableSaveGamesChanged)
 	FOnAvailableSaveGamesChanged OnAvailableSaveGamesChanged;
 
+	/** Event fired right before the current save game has changed. */
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnBeforeCurrentSaveGameChanged, FCurrentSaveGame /* SaveGameBeforeChange */)
+	FOnBeforeCurrentSaveGameChanged OnBeforeCurrentSaveGameChanged;
+
+	/** Event fired right after the current save game has changed. */
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnAfterCurrentSaveGameChanged, FCurrentSaveGame /* SaveGameAfterChange */)
+	FOnAfterCurrentSaveGameChanged OnAfterCurrentSaveGameChanged;
+
 	/** Event fired right before the current SaveGame is saved. Last chance to push data into the SaveGame. */
 	FCurrentSaveGame::FOnBeforeSaved OnBeforeSaved;
 
@@ -136,6 +144,9 @@ public:
 	virtual void RestoreAsAndTravelIntoCurrentSaveGame(USaveGame& SaveGame, TOptional<FSlotName> LoadedFromSlotName = {});
 	/** Travel into the level that is stored in the current SaveGame. @returns whether this was successful. */
 	virtual bool TryTravelIntoCurrentSaveGame();
+
+	/** Resets the current SaveGame to a new one. */
+	virtual void CreateNewSaveGameAsCurrent();
 
 	/** Resets the current SaveGame to a new one and tells all restoring listeners. */
 	virtual void CreateAndRestoreNewSaveGameAsCurrent();
@@ -297,6 +308,9 @@ protected:
 
 	///////////////////////////////////////////////////////////////////////////////////////
 	/// SAVE & LOAD
+
+	/** Sets current save game and fires pre and post events. */
+	void SetCurrentSaveGame(const FCurrentSaveGame& NewCurrentSaveGame);
 
 	virtual USaveLoadBehavior& CreateSaveLoadBehavior(const USaveGameServiceSettings& Settings);
 	virtual USaveGameSerializer& CreateSaveGameSerializer();

@@ -11,6 +11,7 @@
 
 #include "CheatMenuSettings.h"
 #include "Engine/World.h"
+#include "GameFramework/PlayerState.h"
 #include "Logging/LogVerbosity.h"
 
 WEEKENDUTILS_API DECLARE_LOG_CATEGORY_EXTERN(LogCheatCmd, Log, All);
@@ -26,6 +27,7 @@ public:
 		EArgumentStyle Style = EArgumentStyle::Text;
 		FString ToShortString() const;
 		FString ToString() const;
+		bool IsTextArgument() const;
 
 		struct FOptionsSource // Only for EArgumentStyle::DropdownText
 		{

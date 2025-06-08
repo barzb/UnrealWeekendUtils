@@ -103,7 +103,7 @@ protected:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 
-	UPROPERTY(SaveGame, Instanced, EditDefaultsOnly)
+	UPROPERTY(SaveGame, Instanced, EditDefaultsOnly, Category = "Modular Save Game")
 	TMap<FName, TObjectPtr<USaveGameModule>> Modules = {};
 
 	TSharedPtr<FInstancedStruct> InstancedHeaderData = nullptr;

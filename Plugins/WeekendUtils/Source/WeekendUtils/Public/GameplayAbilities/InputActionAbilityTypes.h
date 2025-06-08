@@ -25,19 +25,19 @@ struct WEEKENDUTILS_API FInputActionBindableAbility
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (InlineEditConditionToggle))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (InlineEditConditionToggle), Category = "Weekend Utils|Abilities|Input Action")
 	bool bBindToInputAction = true;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (EditCondition = "bBindToInputAction"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (EditCondition = "bBindToInputAction"), Category = "Weekend Utils|Abilities|Input Action")
 	TObjectPtr<const UInputAction> InputAction = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weekend Utils|Abilities|Input Action")
 	FText DisplayName = FText();
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weekend Utils|Abilities|Input Action")
 	TSubclassOf<UGameplayAbility> AbilityClass = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weekend Utils|Abilities|Input Action")
 	int32 AbilityLevel = 0;
 
 	///////////////////////////////////////////////////////////////////////////////////////

@@ -60,7 +60,7 @@ public:
 		OnNextBehaviourInitializes.Broadcast(*this, SaveGameService);
 		OnNextBehaviourInitializes.Clear();
 #else
-		UE_LOGLogSaveLoadBehavior, Fatal, TEXT("UMockSaveLoadBehavior was initialized outside of a valid automation test environment!");
+		UE_LOG(LogSaveLoadBehavior, Fatal, TEXT("UMockSaveLoadBehavior was initialized outside of a valid automation test environment!"));
 #endif
 	}
 

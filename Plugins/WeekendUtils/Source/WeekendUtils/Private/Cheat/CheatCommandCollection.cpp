@@ -10,6 +10,7 @@
 #include "Cheat/CheatCommandCollection.h"
 
 #include "Cheat/CheatCommand.h"
+#include "Misc/FileHelper.h"
 
 namespace Cheats
 {

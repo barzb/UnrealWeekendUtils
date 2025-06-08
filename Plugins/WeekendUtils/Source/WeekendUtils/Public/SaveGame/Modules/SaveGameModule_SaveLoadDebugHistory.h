@@ -35,7 +35,7 @@ public:
 	UPROPERTY(Transient)
 	TObjectPtr<USaveGameService> SaveGameService = nullptr;
 
-	UPROPERTY(SaveGame, VisibleAnywhere)
+	UPROPERTY(SaveGame, VisibleAnywhere, Category = "Weekend Utils|Save Game")
 	TArray<FString> DebugHistory = {};
 
 protected:

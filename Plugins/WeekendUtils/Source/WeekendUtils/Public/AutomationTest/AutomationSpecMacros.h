@@ -39,7 +39,7 @@
 	 * ...which declares a spec class FHelloWorldSpec in the "WeekendUtils.Foo" category.
 	 */
 	#define WE_BEGIN_DEFINE_SPEC(SpecName) \
-		BEGIN_DEFINE_SPEC(F##SpecName##Spec, SPEC_TEST_CATEGORY "." #SpecName, EAutomationTestFlags::ApplicationContextMask | EAutomationTestFlags::ProductFilter) \
+		BEGIN_DEFINE_SPEC(F##SpecName##Spec, SPEC_TEST_CATEGORY "." #SpecName, EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter) \
 		static inline const FString SpecTestWorldName = "FTestWorld_" #SpecName;
 	#define WE_END_DEFINE_SPEC(SpecName) \
 		END_DEFINE_SPEC(F##SpecName##Spec) \

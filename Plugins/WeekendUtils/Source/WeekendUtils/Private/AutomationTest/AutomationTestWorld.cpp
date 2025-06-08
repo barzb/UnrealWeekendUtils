@@ -40,7 +40,13 @@ namespace WeekendUtils
 		if (IsValid(World))
 		{
 			World->BeginTearingDown();
+			GEngine->CancelPending(World);
 			GEngine->ShutdownWorldNetDriver(World);
+
+			World->bIsLevelStreamingFrozen = false;
+			World->SetShouldForceUnloadStreamingLevels((true));
+			World->FlushLevelStreaming(EFlushLevelStreamingType::Visibility);
+			World->EndPlay(EEndPlayReason::Quit);
 
 			for (AActor* ActorItr : TActorRange<AActor>(World))
 			{
@@ -57,6 +63,7 @@ namespace WeekendUtils
 				World->GetGameInstance()->Shutdown();
 			}
 
+			World->CleanupWorld();
 			World->DestroyWorld(true);
 			GEngine->DestroyWorldContext(World);
 		}
@@ -67,6 +74,9 @@ namespace WeekendUtils
 		LocalPlayer = nullptr;
 		PlayerController = nullptr;
 		Viewport = nullptr;
+
+		// Run Garbage Collection to force destruction
+		CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS);
 	}
 
 	void FScopedAutomationTestWorld::InitializeGame() { InitializeGame(FConfig()); }

@@ -30,14 +30,7 @@ public class WeekendUtils : ModuleRules
 			new string[]
 			{
 				"Core",
-				"DeveloperSettings",
-				"EnhancedInput",
-				"GameplayAbilities",
-				"GameplayTasks",
-				"ModelViewViewModel",
-				"Slate", "SlateCore",
-				"StructUtils",
-				"UMG",
+				"Engine",
 			}
 		);
 
@@ -50,6 +43,16 @@ public class WeekendUtils : ModuleRules
 				"GameFeatures",
 				"InputCore",
 				"Projects",
+				"EngineSettings",
+				"DeveloperSettings",
+				"EnhancedInput",
+				"GameplayAbilities",
+				"GameplayTags",
+				"GameplayTasks",
+				"ModelViewViewModel",
+				"Slate",
+				"SlateCore",
+				"UMG",
 			}
 		);
 

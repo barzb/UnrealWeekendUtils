@@ -9,6 +9,9 @@
 
 #include "SaveGame/SaveGameActorComponent.h"
 
+#include "Components/SceneComponent.h"
+#include "Engine/World.h"
+#include "GameFramework/Actor.h"
 #include "SaveGame/ModularSaveGame.h"
 #include "SaveGame/Modules/LevelObjectRestorer.h"
 
