@@ -30,33 +30,33 @@ class WEEKENDUTILS_API USaveLoadMarkerViewModel : public UMVVMViewModelBase,
 public:
 	USaveLoadMarkerViewModel();
 
-	UPROPERTY(FieldNotify, BlueprintReadOnly)
+	UPROPERTY(FieldNotify, BlueprintReadOnly, Category = "Weekend Utils|Save Game")
 	ESlateVisibility SuggestedWidgetVisibility = ESlateVisibility::Collapsed;
 
-	UPROPERTY(FieldNotify, BlueprintReadOnly)
+	UPROPERTY(FieldNotify, BlueprintReadOnly, Category = "Weekend Utils|Save Game")
 	bool bIsSavingOrLoading = false;
 
-	UPROPERTY(FieldNotify, BlueprintReadOnly)
+	UPROPERTY(FieldNotify, BlueprintReadOnly, Category = "Weekend Utils|Save Game")
 	bool bIsLoading = false;
 
-	UPROPERTY(FieldNotify, BlueprintReadOnly)
+	UPROPERTY(FieldNotify, BlueprintReadOnly, Category = "Weekend Utils|Save Game")
 	bool bIsSaving = false;
 
 	/** Timestamp (UTC) of the last time the game was saved. */
-	UPROPERTY(FieldNotify, BlueprintReadOnly)
+	UPROPERTY(FieldNotify, BlueprintReadOnly, Category = "Weekend Utils|Save Game")
 	FDateTime UtcTimeOfLastSave = FDateTime();
 
 	/** @returns how long ago the current savegame was saved. */
-	UFUNCTION(FieldNotify, BlueprintPure)
+	UFUNCTION(FieldNotify, BlueprintPure, Category = "Weekend Utils|Save Game")
 	FTimespan GetTimeSinceLastSave() const;
 
-	UFUNCTION(FieldNotify, BlueprintPure)
+	UFUNCTION(FieldNotify, BlueprintPure, Category = "Weekend Utils|Save Game")
 	bool ShouldShowTimeSinceLastSave() const;
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game")
 	virtual void BeginUsage();
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game")
 	virtual void EndUsage();
 
 protected:

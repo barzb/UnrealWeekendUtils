@@ -10,12 +10,19 @@
 #include "Cheat/SCheatMenu.h"
 
 #include "Cheat/CheatCommand.h"
+#include "Engine/Engine.h"
+#include "Engine/LocalPlayer.h"
+#include "Internationalization/BreakIterator.h"
+#include "Misc/ConfigCacheIni.h"
 #include "Styling/StyleColors.h"
+#include "Widgets/SBoxPanel.h"
+#include "Widgets/Input/SButton.h"
+#include "Widgets/Input/SComboBox.h"
 #include "Widgets/Input/SEditableTextBox.h"
 #include "Widgets/Input/SNumericEntryBox.h"
 #include "Widgets/Input/SSearchBox.h"
+#include "Widgets/Layout/SBox.h"
 #include "Widgets/Layout/SScrollBox.h"
-#include "Widgets/SBoxPanel.h"
 #include "Widgets/Text/STextBlock.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -51,6 +58,7 @@ DEFINE_CHEAT_COLLECTION(CheatMenuCheats)
 		.SupportsMaximize(true)
 		.SupportsMinimize(true)
 		.Title(INVTEXT("Cheat Menu"))
+		.FocusWhenFirstShown(true)
 		.UseOSWindowBorder(false);
 		SlateWindow->SetContent(SNew(SCheatMenu));
 
@@ -88,6 +96,15 @@ namespace
 
 	const FMargin DEFAULT_PADDING = FMargin(5.f);
 
+	FSlateFontInfo GetDefaultCheatMenuTextFont() { return FCoreStyle::GetDefaultFontStyle("Regular", 8); }
+
+	/**
+	 * Combobox widgets tend to lose focus when they open, which can lead to them closing again when moving the cursor.
+	 * To counter that, their OnComboBoxOpening method will reset the focus to the combobox button, and for that we need
+	 * to cache the pointers to the combobox (indexed by a unique ID).
+	 */
+	TMap<FGuid, TWeakPtr<SComboBox<TSharedPtr<FString>>>> CheatMenuComboBoxPointers;
+
 	struct FSortMenuEntryPredicate
 	{
 		FORCEINLINE bool operator()(const FName& A, const FName& B) const
@@ -119,6 +136,8 @@ void SCheatMenu::Construct(const FArguments& InArgs)
 	CurrentTabName = DEFAULT_TAB_NAME;
 	NumRecentlyUsedCheatsToShow = InArgs._NumRecentlyUsedCheatsToShow;
 	OnCheatExecuted = InArgs._OnCheatExecuted;
+
+	bCanSupportFocus = true;
 
 	TSharedRef<SHorizontalBox> MainContent = SNew(SHorizontalBox);
 
@@ -220,7 +239,7 @@ void SCheatMenu::Construct(const FArguments& InArgs)
 					.HAlign(HAlign_Fill)
 					.VAlign(VAlign_Fill)
 					.ToolTipText(INVTEXT("Clear Output"))
-					.IsEnabled_Lambda([this](){ return !ErrorText->GetText().IsEmpty(); })
+					.IsEnabled_Lambda([this]() -> bool { return !ErrorText->GetText().IsEmpty(); })
 					.OnClicked_Lambda([this]()
 					{
 						ErrorText->SetText(FText::GetEmpty());
@@ -283,6 +302,12 @@ SCheatMenu::~SCheatMenu()
 	TabList.Reset();
 	SectionList.Reset();
 	ErrorText.Reset();
+	CheatMenuComboBoxPointers.Reset();
+}
+
+bool SCheatMenu::SupportsKeyboardFocus() const
+{
+	return true;
 }
 
 TArray<FString> SCheatMenu::FEntry::GetArgs() const
@@ -418,6 +443,7 @@ void SCheatMenu::PopulateTabList()
 				SNew(STextBlock)
 				.Justification(ETextJustify::Left)
 				.Text(FText::Format(INVTEXT("{0}    "), Tab.Text)) // Hack to compensate width offset from scroll bar.
+				.Font(GetDefaultCheatMenuTextFont())
 				.ToolTipText(Tab.ToolTip)
 			]
 		];
@@ -426,6 +452,7 @@ void SCheatMenu::PopulateTabList()
 
 void SCheatMenu::RefreshTabContent()
 {
+	CheatMenuComboBoxPointers.Reset();
 	SectionList->ClearChildren();
 	if (!CurrentTabName.IsValid())
 		return;
@@ -494,6 +521,7 @@ TSharedRef<SWidget> SCheatMenu::ConstructSection(const FSectionName& SectionName
 				SNew(STextBlock)
 				.Font(FAppStyle::Get().GetFontStyle("NormalFontBold"))
 				.Text(FText::FromString(SectionName.ToString()))
+				.Font(GetDefaultCheatMenuTextFont())
 				.ColorAndOpacity(EStyleColor::AccentWhite)
 				.Justification(ETextJustify::Center)
 				.Margin(FMargin(10.f, -2.f))
@@ -615,6 +643,7 @@ TSharedRef<SWidget> SCheatMenu::ConstructCheatMenuActionItems(const TArray<TShar
 						SNew(STextBlock)
 						.Justification(ETextJustify::Center)
 						.Text(FText::FromString(CheatMenuAction->GetDisplayName()))
+						.Font(GetDefaultCheatMenuTextFont())
 						.ToolTipText(FText::FromString(CheatMenuAction->GetCommandInfo()))
 						.HighlightText_Lambda([this](){ return FilterText.Get(FText()); })
 					]
@@ -627,7 +656,7 @@ TSharedRef<SWidget> SCheatMenu::ConstructCheatMenuActionItems(const TArray<TShar
 		for (const ICheatMenuAction::FArgumentInfo& ArgumentInfo : CheatMenuAction->GetArgumentsInfo())
 		{
 			TSharedPtr<FString>& ArgValue = *ArgValueItr; ++ArgValueItr;
-			const bool bIsText = (ArgumentInfo.Style == EArgumentStyle::Text || ArgumentInfo.Style == EArgumentStyle::DropdownText);
+			const bool bIsText = ArgumentInfo.IsTextArgument();
 
 			CommandBox->AddSlot()
 			.HAlign(HAlign_Fill)
@@ -644,13 +673,16 @@ TSharedRef<SWidget> SCheatMenu::ConstructCheatMenuActionItems(const TArray<TShar
 				[
 					SNew(STextBlock)
 					.Text(FText::FromString(ArgumentInfo.Name + ": "))
+					.Font(GetDefaultCheatMenuTextFont())
 					.Justification(ETextJustify::Right)
+					.AutoWrapText(true)
+					.LineBreakPolicy(FBreakIterator::CreateCamelCaseBreakIterator())
 					.ToolTipText(FText::FromString(ArgumentInfo.Description))
 				]
 
 				// Argument Input:
 				+ SHorizontalBox::Slot()
-				.FillWidth(2.f)
+				.FillWidth(bIsText ? 5.f : 2.f)
 				.MaxWidth(bIsText ? 256.f : 64.f)
 				.HAlign(bIsText ? HAlign_Fill : HAlign_Left)
 				.VAlign(VAlign_Center)
@@ -677,6 +709,7 @@ TSharedRef<SWidget> SCheatMenu::ConstructArgumentInput(const ICheatMenuAction::F
 			.Delta(1)
 			.MinDesiredWidth(MinDesiredWith)
 			.ToolTipText(FText::FromString(ArgumentInfo.Description))
+			.Font(GetDefaultCheatMenuTextFont())
 			.Value(DefaultValue)
 			.OnValueCommitted_Lambda([InOutValue](int32 Value, ETextCommit::Type) { *InOutValue = FString::FromInt(Value); });
 		}
@@ -689,6 +722,7 @@ TSharedRef<SWidget> SCheatMenu::ConstructArgumentInput(const ICheatMenuAction::F
 			.Delta(0.1f)
 			.MinDesiredWidth(MinDesiredWith)
 			.ToolTipText(FText::FromString(ArgumentInfo.Description))
+			.Font(GetDefaultCheatMenuTextFont())
 			.Value(DefaultValue)
 			.OnValueCommitted_Lambda([InOutValue](float Value, ETextCommit::Type) { *InOutValue = LexToString(Value); });
 		}
@@ -709,10 +743,25 @@ TSharedRef<SWidget> SCheatMenu::ConstructArgumentInput(const ICheatMenuAction::F
 				const TArray<TSharedPtr<FString>>& Options = *ArgumentInfo.OptionsSource.GetOptions(FindPlayWorld());
 				*InOutValue = (Options.IsEmpty() ? *InOutValue : *Options[0]);
 			}
-			return SNew(SComboBox<TSharedPtr<FString>>)
+
+			const FGuid ComboboxId = FGuid::NewGuid();
+			return SAssignNew(CheatMenuComboBoxPointers.Add(ComboboxId), SComboBox<TSharedPtr<FString>>)
+			.IsFocusable(true)
+			.EnableGamepadNavigationMode(true)
+			.CollapseMenuOnParentFocus(false)
 			.ToolTipText(FText::FromString(ArgumentInfo.Description))
 			.OptionsSource(ArgumentInfo.OptionsSource.GetOptions(FindPlayWorld()))
-			.InitiallySelectedItem(InOutValue)
+			.Method(EPopupMethod::UseCurrentWindow)
+			.OnComboBoxOpening_Lambda([ComboboxId]()
+			{
+				// Reset UI focus to the combobox button to avoid that the dropdown menu closes again after moving the mouse (engine bug):
+				TWeakPtr<SComboBox<TSharedPtr<FString>>>* ComboBox = CheatMenuComboBoxPointers.Find(ComboboxId);
+				if (ComboBox && ComboBox->IsValid())
+				{
+					ComboBox->Pin()->RefreshOptions();
+					ComboBox->Pin()->SetMenuContentWidgetToFocus(ComboBox->Pin());
+				}
+			})
 			.OnSelectionChanged_Lambda([InOutValue](TSharedPtr<FString> NewSelection, ESelectInfo::Type)
 			{
 				if (NewSelection.IsValid())
@@ -724,21 +773,25 @@ TSharedRef<SWidget> SCheatMenu::ConstructArgumentInput(const ICheatMenuAction::F
 			{
 				return SNew(STextBlock)
 				.Text(FText::FromString(*Option))
-				.MinDesiredWidth(MinDesiredWith * 2.f);
+				.Font(GetDefaultCheatMenuTextFont())
+				.MinDesiredWidth(MinDesiredWith * 3.f);
 			})
 			[
 				SNew(STextBlock)
 				.Text_Lambda([InOutValue](){ return FText::FromString(*InOutValue); })
-				.MinDesiredWidth(MinDesiredWith * 2.f)
+				.Font(GetDefaultCheatMenuTextFont())
+				.Justification(ETextJustify::Right)
+				.MinDesiredWidth(MinDesiredWith * 3.f)
+				.OverflowPolicy(ETextOverflowPolicy::MiddleEllipsis)
 			];
 		}
 		default: case EArgumentStyle::Text:
 		{
 			const FString DefaultValue = *InOutValue;
 			return SNew(SEditableTextBox)
-			.MinDesiredWidth(MinDesiredWith * 2.f)
+			.MinDesiredWidth(MinDesiredWith * 3.f)
 			.ToolTipText(FText::FromString(ArgumentInfo.Description))
-			.Text(FText::FromString(DefaultValue))
+			.Font(GetDefaultCheatMenuTextFont())
 			.OnTextCommitted_Lambda([InOutValue](const FText& Text, ETextCommit::Type) { *InOutValue = Text.ToString(); });
 		}
 	}

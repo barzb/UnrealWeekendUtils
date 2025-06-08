@@ -28,6 +28,6 @@ public:
 	void RegisterServiceConfig(UGameServiceConfig& Config);
 
 	/** Configurable class default objects of all auto-registered Game Service Configs. */
-	UPROPERTY(VisibleAnywhere, NoClear, EditFixedSize, meta = (EditInline))
+	UPROPERTY(VisibleAnywhere, NoClear, EditFixedSize, meta = (EditInline), Category = "Weekend Utils|Game Service")
 	TMap<FName, TObjectPtr<UGameServiceConfig>> GameServiceConfigs = {};
 };

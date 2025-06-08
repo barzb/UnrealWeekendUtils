@@ -50,19 +50,19 @@ protected:
 	///////////////////////////////////////////////////////////////////////////////////////
 	/// CLASS CONFIG
 
-	UPROPERTY(EditDefaultsOnly, Category = "Ability", meta = (ShowOnlyInnerProperties, TitleProperty = "DisplayName"))
+	UPROPERTY(EditDefaultsOnly, Category = "Weekend Utils|Abilities", meta = (ShowOnlyInnerProperties, TitleProperty = "DisplayName"))
 	TArray<FInputActionBindableAbility> DefaultAbilities = {};
 
-	UPROPERTY(EditDefaultsOnly, Category = "Ability", meta = (ShowOnlyInnerProperties, TitleProperty = "DisplayName"))
+	UPROPERTY(EditDefaultsOnly, Category = "Weekend Utils|Abilities", meta = (ShowOnlyInnerProperties, TitleProperty = "DisplayName"))
 	TArray<FAttributeSetConfig> DefaultAttributes = {};
 
-	UPROPERTY(EditDefaultsOnly, Category = "Ability")
+	UPROPERTY(EditDefaultsOnly, Category = "Weekend Utils|Abilities")
 	TArray<TSubclassOf<UGameplayEffect>> DefaultEffects = {};
 
-	UPROPERTY(EditDefaultsOnly, Category = "Ability")
+	UPROPERTY(EditDefaultsOnly, Category = "Weekend Utils|Abilities")
 	TObjectPtr<const UInputAction> InputActionForGenericConfirm = nullptr;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Ability")
+	UPROPERTY(EditDefaultsOnly, Category = "Weekend Utils|Abilities")
 	TObjectPtr<const UInputAction> InputActionForGenericCancel = nullptr;
 
 	///////////////////////////////////////////////////////////////////////////////////////

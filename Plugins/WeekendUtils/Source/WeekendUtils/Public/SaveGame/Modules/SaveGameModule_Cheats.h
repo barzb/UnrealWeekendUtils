@@ -32,7 +32,7 @@ public:
 	}
 
 	/** Cheat commands (with args) that will be executed as soon as the SaveGame is restored and travelled into. */
-	UPROPERTY(SaveGame, EditDefaultsOnly)
+	UPROPERTY(SaveGame, EditDefaultsOnly, Category = "Weekend Utils|Save Game")
 	TSet<FString> CheatsToExecuteAfterTravel = {};
 };
 

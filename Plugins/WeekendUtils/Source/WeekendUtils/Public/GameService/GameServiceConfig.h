@@ -61,6 +61,9 @@ public:
 	/** Automatically registers the config instance with the @UGameServiceManager. Already called when using @CreateForWorld(). */
 	void RegisterWithGameServiceManager() const;
 
+	/** Checks the configured dependencies of each configured service, and asserts for each service that is configured as dependency, but is missing from this config. */
+	void ValidateDependenciesForConfiguredServices() const;
+
 	/**
 	 * Configures a game service class to be registered.
 	 * @note Services are only instanced once (=> singleton) for the register-type.
@@ -120,15 +123,17 @@ public:
 
 protected:
 	/** Key: FGameServiceClass | Value: FGameServiceInstanceClass */
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere, Category = "Weekend Utils|Game Service")
 	TMap<TSubclassOf<UObject>, TSubclassOf<UGameServiceBase>> ConfiguredServices;
 
 	/** Key: FGameServiceClass | Value: UGameService Instance */
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere, Category = "Weekend Utils|Game Service")
 	TMap<TSubclassOf<UObject>, TObjectPtr<const UGameServiceBase>> ConfiguredTemplates;
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere, Category = "Weekend Utils|Game Service")
 	uint32 ConfiguredPriority = 0;
 
 	void ResetConfiguredServices();
+
+	void CheckServiceDependencies(const UGameServiceBase& ServiceInstance) const;
 };

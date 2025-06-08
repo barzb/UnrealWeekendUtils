@@ -33,6 +33,9 @@ public:
 	/** @returns the CDO of the game mode service config class configured for given world, or nullptr. */
 	static const UGameModeServiceConfigBase* FindConfigForWorld(const UWorld& World);
 
+	/** @returns the CDO of the game mode service config class configured for given game mode, or nullptr. */
+	static const UGameModeServiceConfigBase* FindConfigForGameModeClass(const TSubclassOf<AGameModeBase>& GameModeClass);
+
 	/** @returns whether this config instance is configured for given game mode class. */
 	bool ShouldUseWithGameMode(const TSubclassOf<AGameModeBase>& GameModeClass) const;
 	template<class T> bool ShouldUseWithGameMode() const { return ShouldUseWithGameMode(T::StaticClass()); }
@@ -42,7 +45,7 @@ public:
 	template<class T> void RegisterFor() { RegisterFor(T::StaticClass()); }
 
 protected:
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere, Category = "Weekend Utils|Game Service")
 	TArray<TSubclassOf<AGameModeBase>> ConfiguredGameModes = {};
 
 	void Reconfigure();

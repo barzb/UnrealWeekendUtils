@@ -35,8 +35,28 @@ void UGameServiceConfig::RegisterWithGameServiceManager() const
 	UGameServiceManager::Get().RegisterServices(*this);
 }
 
+void UGameServiceConfig::ValidateDependenciesForConfiguredServices() const
+{
+	for (const TTuple<TSubclassOf<UObject>, TSubclassOf<UGameServiceBase>>& ServiceItr : ConfiguredServices)
+	{
+		const UGameServiceBase* ServiceInstance = ConfiguredTemplates.Contains(ServiceItr.Key)
+			? ConfiguredTemplates[ServiceItr.Key].Get()
+			: GetDefault<UGameServiceBase>(ServiceItr.Value);
+		CheckServiceDependencies(*ServiceInstance);
+	}
+}
+
 void UGameServiceConfig::ResetConfiguredServices()
 {
 	ConfiguredServices.Reset();
 	ConfiguredTemplates.Reset();
+}
+
+void UGameServiceConfig::CheckServiceDependencies(const UGameServiceBase& ServiceInstance) const
+{
+	for (TSubclassOf<UObject> ServiceClassDependency : ServiceInstance.GetServiceClassDependencies())
+	{
+		checkf(ConfiguredServices.Contains(ServiceClassDependency), TEXT("%s configured a GameServiceDependency to %s, which was not configured in %s"),
+			*ServiceInstance.GetClass()->GetName(), *GetNameSafe(ServiceClassDependency), *GetName());
+	}
 }

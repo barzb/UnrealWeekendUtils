@@ -63,6 +63,11 @@ FString ICheatMenuAction::FArgumentInfo::ToString() const
 	return FString::Printf(TEXT("[%s]: %s - %s"), *Name, *LexToString(Style), *Description);
 }
 
+bool ICheatMenuAction::FArgumentInfo::IsTextArgument() const
+{
+	return Style == EArgumentStyle::Text || Style == EArgumentStyle::DropdownText;
+}
+
 FString ICheatMenuAction::GetFullDescription() const
 {
 	if (ArgumentsInfo.IsEmpty())

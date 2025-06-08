@@ -32,20 +32,20 @@ public:
 	 * Event fired after a cheat has been executed and ShouldCloseAfterCheatExecution is enabled.
 	 * Request must be fulfilled by the parent widget.
 	 */
-	UPROPERTY(BlueprintAssignable)
+	UPROPERTY(BlueprintAssignable, Category = "Weekend Utils|Cheat Menu")
 	FOnCheatMenuCloseRequested OnCloseRequested;
 
 	/** When enabled, the cheat menu will fire a close request after a cheat has been executed through the menu. */
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Cheat Menu")
 	void SetShouldCloseAfterCheatExecution(bool bShouldClose);
 
 	/** @returns whether the cheat menu will fire a close request after a cheat has been executed through the menu. */
-	UFUNCTION(BlueprintPure)
+	UFUNCTION(BlueprintPure, Category = "Weekend Utils|Cheat Menu")
 	FORCEINLINE bool ShouldCloseAfterCheatExecution() const { return bShouldCloseAfterCheatExecution; }
 
 protected:
 	/** When enabled, the cheat menu will fire a close request after a cheat has been executed through the menu. */
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Weekend Utils|Cheat Menu")
 	bool bShouldCloseAfterCheatExecution = true;
 
 	TSharedPtr<SCheatMenu> CheatMenu = nullptr;

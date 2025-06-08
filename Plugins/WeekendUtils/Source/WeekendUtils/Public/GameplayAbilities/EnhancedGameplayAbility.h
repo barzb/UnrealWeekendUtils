@@ -24,10 +24,10 @@ class WEEKENDUTILS_API UEnhancedGameplayAbility : public UGameplayAbility
 
 protected:
 	/** Enables blueprint (enhanced) input bindings to trigger inside of the ability graph. Instanced abilities only. */
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Abilities")
 	virtual void BindToInputComponent(UInputComponent* InputComponent = nullptr);
 
 	/** Disables blueprint (enhanced) input bindings to trigger inside of the ability graph. Instanced abilities only. */
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Abilities")
 	virtual void UnbindFromInputComponent(UInputComponent* InputComponent = nullptr);
 };

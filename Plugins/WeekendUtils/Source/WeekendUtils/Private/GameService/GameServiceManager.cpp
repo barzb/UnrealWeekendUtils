@@ -21,6 +21,8 @@ UGameServiceManager::UGameServiceManager()
 
 void UGameServiceManager::RegisterServices(const UGameServiceConfig& Config)
 {
+	Config.ValidateDependenciesForConfiguredServices();
+
 	int32 NumRegistrations = 0;
 	for (const auto Itr : Config.GetConfiguredServices())
 	{
@@ -329,7 +331,8 @@ void UGameServiceManager::ShutdownAllServicesWithLifetime(const EGameServiceLife
 	// Shutdown the services in the reverse order of how they were started:
 	for (int32 i = 0; i < StartOrderedServices.Num(); ++i)
 	{
-		const FGameServiceClass& ServiceClass = StartOrderedServices[i];
+		// Copy entry so we can remove it from the list early:
+		const FGameServiceClass ServiceClass = StartOrderedServices[i];
 		if (StartedServices[ServiceClass]->GetLifetime() != Lifetime)
 			continue;
 

@@ -34,7 +34,7 @@ WE_END_DEFINE_SPEC(GameInstanceServiceDestroyer)
 		TestWorld->InitializeGame();
 
 		// This is a bit hacky, but because the UGameInstanceServiceDestroyer type info is private in its source module, we'll find it by name:
-		TArray<UGameInstanceSubsystem*> GameInstanceSubsystems = TestWorld->GameInstance->GetSubsystemArray<UGameInstanceSubsystem>();
+		TArray<UGameInstanceSubsystem*> GameInstanceSubsystems = TestWorld->GameInstance->GetSubsystemArrayCopy<UGameInstanceSubsystem>();
 		auto** Finder = GameInstanceSubsystems.FindByPredicate([](UGameInstanceSubsystem* Subsystem) {
 			return (Subsystem->GetName().Contains("GameInstanceServiceDestroyer"));
 		});

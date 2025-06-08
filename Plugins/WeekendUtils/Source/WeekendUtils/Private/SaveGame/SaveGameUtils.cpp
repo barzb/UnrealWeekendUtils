@@ -9,6 +9,7 @@
 
 #include "SaveGame/SaveGameUtils.h"
 
+#include "Algo/Contains.h"
 #include "GameFramework/GameModeBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "SaveGame/SaveGamePreset.h"
@@ -127,12 +128,19 @@ bool USaveGameUtils::IsSavingAllowedForWorld(UWorld* World)
 		return true;
 
 	const FSoftObjectPath Level = GetLevel(World);
+
+#if WITH_EDITOR
+	// Since PIE adds some prefix to the actual path, only compare the asset name in editor.
+	if (Algo::ContainsBy(Settings->MapsWhereSavingIsAllowed, Level.GetAssetName(), &FSoftObjectPath::GetAssetName))
+		return true;
+#else
 	if (Settings->MapsWhereSavingIsAllowed.Contains(Level))
 		return true;
+#endif
 
 	for (const UClass* GameModeClass = GetGameModeClass(World); GameModeClass != nullptr; GameModeClass = GameModeClass->GetSuperClass())
 	{
-		const FSoftClassPath GameMode = FSoftClassPath(GetPathNameSafe(GameModeClass));
+		const FSoftClassPath GameMode{GetPathNameSafe(GameModeClass)};
 		if (Settings->GameModesWhereSavingIsAllowed.Contains(GameMode))
 			return true;
 

@@ -9,6 +9,7 @@
 
 #include "GameService/GameModeServiceConfigBase.h"
 
+#include "GameMapsSettings.h"
 #include "GameService/Settings/GameServiceFrameworkSettings.h"
 
 namespace
@@ -25,7 +26,7 @@ void UGameModeServiceConfigBase::RegisterFor(const TSubclassOf<AGameModeBase>& G
 	if (RegisteredConfigClass != nullptr && RegisteredConfigClass != GetClass())
 	{
 		// Only one AutoRegisteredGameServiceConfig per game mode is allowed:
-		ensureMsgf(false, TEXT("GameServiceConfig for GameMode %s already has another config class configured!"));
+		ensureMsgf(false, TEXT("GameServiceConfig for GameMode %s already has another config class configured!"), *GameModeClass->GetName());
 	}
 
 	ConfiguredGameModes.Add(GameModeClass);
@@ -34,30 +35,32 @@ void UGameModeServiceConfigBase::RegisterFor(const TSubclassOf<AGameModeBase>& G
 
 bool UGameModeServiceConfigBase::ShouldUseWithGameMode(const TSubclassOf<AGameModeBase>& GameModeClass) const
 {
-	for (const auto Itr : GConfigClassesByGameModes)
-	{
-		const TSubclassOf<AGameModeBase> ConfiguredGameMode = Itr.Key;
-		const TSubclassOf<UGameModeServiceConfigBase> ConfiguredConfig = Itr.Value;
-
-		if (ConfiguredGameMode->IsChildOf(GameModeClass))
-			return this->IsA(ConfiguredConfig);
-	}
-
-	return false;
+	const UGameModeServiceConfigBase* Config = FindConfigForGameModeClass(GameModeClass);
+	return IsValid(Config) && this->IsA(Config->GetClass());
 }
 
 const UGameModeServiceConfigBase* UGameModeServiceConfigBase::FindConfigForWorld(const UWorld& World)
 {
-	const TSubclassOf<AGameModeBase>& CurrentGameModeClass = World.GetWorldSettings()->DefaultGameMode;
-	if (CurrentGameModeClass == nullptr)
-		return nullptr; // No game mode configured in world settings.
+	TSubclassOf<AGameModeBase> CurrentGameModeClass = World.GetWorldSettings()->DefaultGameMode;
+	if (!IsValid(CurrentGameModeClass))
+	{
+		// No override configured in the World Settings. Fallback to default
+		const FSoftClassPath& GameMode = UGameMapsSettings::GetGlobalDefaultGameMode();
+		CurrentGameModeClass = GameMode.TryLoadClass<AGameModeBase>();
+		ensureAlways(IsValid(CurrentGameModeClass));
+	}
 
+	return FindConfigForGameModeClass(CurrentGameModeClass);
+}
+
+const UGameModeServiceConfigBase* UGameModeServiceConfigBase::FindConfigForGameModeClass(const TSubclassOf<AGameModeBase>& GameModeClass)
+{
 	for (const auto Itr : GConfigClassesByGameModes)
 	{
 		const TSubclassOf<AGameModeBase> ConfiguredGameMode = Itr.Key;
 		const TSubclassOf<UGameModeServiceConfigBase> ConfiguredConfig = Itr.Value;
 
-		if (CurrentGameModeClass->IsChildOf(ConfiguredGameMode))
+		if (GameModeClass->IsChildOf(ConfiguredGameMode))
 			return ConfiguredConfig->GetDefaultObject<UGameModeServiceConfigBase>();
 	}
 

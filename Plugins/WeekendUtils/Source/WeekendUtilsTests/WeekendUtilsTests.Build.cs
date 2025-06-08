@@ -18,7 +18,6 @@ public class WeekendUtilsTests : ModuleRules
 			new string[]
 			{
 				"Core",
-				"Engine",
 			}
 		);
 
@@ -27,6 +26,7 @@ public class WeekendUtilsTests : ModuleRules
 			{
 				"CoreUObject",
 				"WeekendUtils",
+				"Engine",
 			}
 		);
 	}

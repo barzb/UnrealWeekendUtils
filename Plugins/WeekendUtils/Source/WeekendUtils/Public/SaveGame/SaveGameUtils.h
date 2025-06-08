@@ -20,24 +20,24 @@ class WEEKENDUTILS_API USaveGameUtils : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(BlueprintCallable, Category = "SaveLoad|Editor", meta = (DevelopmentOnly))
+	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game|Editor", meta = (DevelopmentOnly))
 	static void OpenSaveGameProjectSettings();
 
-	UFUNCTION(BlueprintCallable, Category = "SaveLoad|Editor", meta = (DevelopmentOnly))
+	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game|Editor", meta = (DevelopmentOnly))
 	static void GetOverridePlayInEditorSaveGameSlot(bool& bOutIsOverridden, FString& OutSlotName);
 
-	UFUNCTION(BlueprintCallable, Category = "SaveLoad|Editor", meta = (DevelopmentOnly))
+	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game|Editor", meta = (DevelopmentOnly))
 	static void SetOverridePlayInEditorSaveGameSlot(bool bOverride, FString SlotName);
 
-	UFUNCTION(BlueprintCallable, Category = "SaveLoad|Editor", meta = (DevelopmentOnly))
+	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game|Editor", meta = (DevelopmentOnly))
 	static TArray<FString> FindAllSaveGamePresetNames();
 
-	UFUNCTION(BlueprintCallable, Category = "SaveLoad")
+	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game")
 	static TArray<FString> FindAllLocalSaveGameSlotNames();
 
-	UFUNCTION(BlueprintCallable, Category = "SaveLoad")
+	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game")
 	static void DeleteAllLocalSaveGames(int32 UserIndex = 0);
 
-	UFUNCTION(BlueprintCallable, Category = "SaveLoad")
+	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game")
 	static bool IsSavingAllowedForWorld(UWorld* World);
 };

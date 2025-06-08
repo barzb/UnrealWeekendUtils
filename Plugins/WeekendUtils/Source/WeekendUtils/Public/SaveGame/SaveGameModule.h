@@ -32,11 +32,11 @@ public:
 	FOnAfterModuleRestored OnAfterModuleRestored;
 
 	/** Default identifier that must be unique across all modules and is used when a module is not registered by custom name. */
-	UPROPERTY(SaveGame, VisibleAnywhere)
+	UPROPERTY(SaveGame, VisibleAnywhere, Category = "Weekend Utils|Save Game")
 	FName DefaultModuleName = NAME_None;
 
 	/** Module version for potential compatibility checks. */
-	UPROPERTY(SaveGame, EditDefaultsOnly)
+	UPROPERTY(SaveGame, EditDefaultsOnly, Category = "Weekend Utils|Save Game")
 	int32 ModuleVersion = 0;
 
 	// - UObject

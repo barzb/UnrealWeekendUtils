@@ -41,7 +41,7 @@ WE_END_DEFINE_SPEC(WorldGameServiceRunner)
 		TestWorld->InitializeGame();
 
 		// This is a bit hacky, but because the UWorldGameServiceRunner type info is private in its source module, we'll find it by name:
-		TArray<UTickableWorldSubsystem*> WorldSubsystems = TestWorld->AsRef().GetSubsystemArray<UTickableWorldSubsystem>();
+		TArray<UTickableWorldSubsystem*> WorldSubsystems = TestWorld->AsRef().GetSubsystemArrayCopy<UTickableWorldSubsystem>();
 		auto** Finder = WorldSubsystems.FindByPredicate([](UTickableWorldSubsystem* Subsystem) {
 			return (Subsystem->GetName().Contains("WorldGameServiceRunner"));
 		});

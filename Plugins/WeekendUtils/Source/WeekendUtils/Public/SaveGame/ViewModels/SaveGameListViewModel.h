@@ -35,15 +35,15 @@ class WEEKENDUTILS_API USaveGameListViewModel : public UMVVMViewModelBase,
 public:
 	using FSlotName = FString;
 
-	UPROPERTY(FieldNotify, BlueprintReadOnly)
+	UPROPERTY(FieldNotify, BlueprintReadOnly, Category = "Weekend Utils|Save Game")
 	TArray<TObjectPtr<USaveGameSlotViewModel>> Slots = {};
 
 	USaveGameListViewModel();
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game")
 	virtual void BeginUsage(TSubclassOf<USaveGameSlotViewModel> SlotClass);
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game")
 	virtual void EndUsage();
 
 protected:

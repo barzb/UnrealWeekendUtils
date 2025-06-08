@@ -10,8 +10,13 @@
 #include "SaveGame/ModularSaveGame.h"
 
 #include "GameService/GameServiceLocator.h"
+#include "Misc/EngineVersion.h"
 #include "SaveGame/SaveGameHeader.h"
 #include "SaveGame/SaveGameService.h"
+#include "Serialization/CustomVersion.h"
+#include "Serialization/MemoryReader.h"
+#include "Serialization/MemoryWriter.h"
+#include "Templates/SubclassOf.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////
 /// @UModularSaveGame
@@ -96,7 +101,7 @@ bool FModularSaveGameHeader::TryRead(FMemoryReader& MemoryReader)
 
 	// Read custom version data:
 	MemoryReader << CustomVersionFormat;
-	CustomVersions.Serialize(MemoryReader, static_cast<ECustomVersionSerializationFormat::Type>(CustomVersionFormat));
+	CustomVersions.Serialize(MemoryReader, static_cast<ECustomVersionSerializationFormat>(CustomVersionFormat));
 	MemoryReader.SetCustomVersions(CustomVersions);
 
 	// Read out custom header data:
@@ -121,7 +126,7 @@ bool FModularSaveGameHeader::TryWrite(FMemoryWriter& MemoryWriter)
 
 	// Write out custom version data:
 	MemoryWriter << CustomVersionFormat;
-	CustomVersions.Serialize(MemoryWriter, static_cast<ECustomVersionSerializationFormat::Type>(CustomVersionFormat));
+	CustomVersions.Serialize(MemoryWriter, static_cast<ECustomVersionSerializationFormat>(CustomVersionFormat));
 
 	// Write custom header data:
 	MemoryWriter << SaveGameClassName;
