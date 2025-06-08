@@ -16,22 +16,22 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////
 
-FWeekendUtilsSaveGameProxyArchive::FWeekendUtilsSaveGameProxyArchive(FArchive& InInnerArchive, USaveGame& InSaveGame, bool bInLoadIfFindFails) :
-	FObjectAndNameAsStringProxyArchive(InInnerArchive, bInLoadIfFindFails), SaveGame(InSaveGame)
+FWeekendUtilsSubobjectProxyArchive::FWeekendUtilsSubobjectProxyArchive(FArchive& InInnerArchive, UObject& InSubobjectOwner, bool bInLoadIfFindFails) :
+	FObjectAndNameAsStringProxyArchive(InInnerArchive, bInLoadIfFindFails), SubobjectOwner(InSubobjectOwner)
 {
 	ArIsSaveGame = true;
 }
 
-FArchive& FWeekendUtilsSaveGameProxyArchive::operator<<(UObject*& Obj)
+FArchive& FWeekendUtilsSubobjectProxyArchive::operator<<(UObject*& Obj)
 {
 	if (IsLoading())
 	{
-		FString ObjectPath, ClassPath, IsSubObjectOfSaveGame;
+		FString ObjectPath, ClassPath, IsSubObjectOfOwner;
 		InnerArchive << ObjectPath;
 		InnerArchive << ClassPath;
-		InnerArchive << IsSubObjectOfSaveGame;
+		InnerArchive << IsSubObjectOfOwner;
 
-		if (IsSubObjectOfSaveGame != "1")
+		if (IsSubObjectOfOwner != "1")
 		{
 			// Find/load objects from the asset registry (= asset pointers):
 			Obj = FindObject<UObject>(nullptr, *ObjectPath, false);
@@ -42,7 +42,7 @@ FArchive& FWeekendUtilsSaveGameProxyArchive::operator<<(UObject*& Obj)
 		}
 		else
 		{
-			// Reconstruct subobjects that were part of the save game hierarchy:
+			// Reconstruct subobjects that were part of the owner hierarchy:
 			const UClass* Class = UClass::TryFindTypeSlow<UClass>(ClassPath);
 			if (!Class && bLoadIfFindFails)
 			{
@@ -50,7 +50,7 @@ FArchive& FWeekendUtilsSaveGameProxyArchive::operator<<(UObject*& Obj)
 			}
 			if (Class)
 			{
-				Obj = NewObject<UObject>(&SaveGame, Class);
+				Obj = NewObject<UObject>(&SubobjectOwner, Class);
 				Obj->Serialize(InnerArchive);
 			}
 		}
@@ -59,11 +59,11 @@ FArchive& FWeekendUtilsSaveGameProxyArchive::operator<<(UObject*& Obj)
 	{
 		FString ObjectPath(GetPathNameSafe(Obj));
 		FString ClassPath (GetPathNameSafe(Obj ? Obj->GetClass() : nullptr));
-		FString IsSubObjectOfSaveGame = Obj->IsInOuter(&SaveGame) ? "1" : "0";
+		FString IsSubObjectOfOwner = Obj->IsInOuter(&SubobjectOwner) ? "1" : "0";
 		InnerArchive << ObjectPath;
 		InnerArchive << ClassPath;
-		InnerArchive << IsSubObjectOfSaveGame;
-		if (Obj->IsInOuter(&SaveGame))
+		InnerArchive << IsSubObjectOfOwner;
+		if (Obj->IsInOuter(&SubobjectOwner))
 		{
 			Obj->Serialize(InnerArchive);
 		}

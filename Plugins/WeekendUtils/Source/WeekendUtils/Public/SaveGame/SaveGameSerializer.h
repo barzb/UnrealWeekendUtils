@@ -20,16 +20,15 @@ class USaveGame;
 ///////////////////////////////////////////////////////////////////////////////////////
 
 /**
- * SaveGame archive only!
  * Extends a proxy archive that serializes UObjects and FNames as string data.
  * Recursively serializes sub-objects nested inside serialized objects and restores
  * them by allocating them via NewObject<T>().
  */
-struct FWeekendUtilsSaveGameProxyArchive : FObjectAndNameAsStringProxyArchive
+struct WEEKENDUTILS_API FWeekendUtilsSubobjectProxyArchive : FObjectAndNameAsStringProxyArchive
 {
-	FWeekendUtilsSaveGameProxyArchive(FArchive& InInnerArchive, USaveGame& InSaveGame, bool bInLoadIfFindFails = true);
-	WEEKENDUTILS_API virtual FArchive& operator<<(UObject*& Obj) override;
-	USaveGame& SaveGame;
+	FWeekendUtilsSubobjectProxyArchive(FArchive& InInnerArchive, UObject& InSubobjectOwner, bool bInLoadIfFindFails = true);
+	virtual FArchive& operator<<(UObject*& Obj) override;
+	UObject& SubobjectOwner;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////
