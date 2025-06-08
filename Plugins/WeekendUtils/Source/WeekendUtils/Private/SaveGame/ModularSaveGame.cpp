@@ -172,7 +172,7 @@ bool UModularSaveGameSerializer::TrySerializeSaveGame(USaveGame& InSaveGameObjec
 		return false;
 
 	// Serialize the save game object and all supported properties:
-	FWeekendUtilsSaveGameProxyArchive Archive(MemoryWriter, InSaveGameObject);
+	FWeekendUtilsSubobjectProxyArchive Archive(MemoryWriter, InSaveGameObject);
 	InSaveGameObject.Serialize(Archive);
 
 	return true;
@@ -201,7 +201,7 @@ bool UModularSaveGameSerializer::TryDeserializeSaveGame(const TArray<uint8>& InS
 
 	// Create (empty) save game object and then restore all of its saved properties:
 	OutSaveGameObject = NewObject<USaveGame>(GetOuter(), SaveGameClass);
-	FWeekendUtilsSaveGameProxyArchive Archive(MemoryReader, *OutSaveGameObject);
+	FWeekendUtilsSubobjectProxyArchive Archive(MemoryReader, *OutSaveGameObject);
 	OutSaveGameObject->Serialize(Archive);
 
 	if (UModularSaveGame* ModularSaveGame = Cast<UModularSaveGame>(OutSaveGameObject))

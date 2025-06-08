@@ -10,8 +10,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "InstancedStruct.h"
 #include "Engine/DataAsset.h"
+#include "StructUtils/InstancedStruct.h"
 
 #include "SaveGamePreset.generated.h"
 
