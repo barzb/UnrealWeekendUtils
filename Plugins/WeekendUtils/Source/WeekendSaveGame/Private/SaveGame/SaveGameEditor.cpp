@@ -67,7 +67,7 @@ void USaveGameEditor::ConvertToPreset()
 	{
 		USaveGamePreset* CreatedPreset = Cast<USaveGamePreset>(CreatedAsset);
 		CreatedPreset->HeaderData = HeaderData;
-		CreatedPreset->SaveGame = NewObject<USaveGame>(CreatedAsset, SaveGame->GetClass(), NAME_None, RF_NoFlags, static_cast<USaveGame*>(SaveGame));
+		CreatedPreset->SaveGame = DuplicateObject<USaveGame>(SaveGame, CreatedAsset);
 
 		const FString AssetNameWithoutPrefix = CreatedAsset->GetName().Replace(*AssetPrefix, TEXT(""));
 		CreatedPreset->PresetName = AssetNameWithoutPrefix;

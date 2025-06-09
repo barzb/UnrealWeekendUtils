@@ -14,8 +14,8 @@
 bool UMockSaveGameSerializer::TrySerializeSaveGame(USaveGame& InSaveGameObject, TArray<uint8>& OutSaveData) const
 {
 	// Store a copy so the "saved" version won't change when the originally passed object mutates after serialization:
-	USaveGame* CopyOfSaveGameObject = NewObject<USaveGame>(InSaveGameObject.GetOuter(), InSaveGameObject.GetClass(),
-		FName(InSaveGameObject.GetName() + "_Serialized"), RF_Transient, &InSaveGameObject);
+	USaveGame* CopyOfSaveGameObject =
+		DuplicateObject<USaveGame>(&InSaveGameObject, InSaveGameObject.GetOuter(), FName(InSaveGameObject.GetName() + "_Serialized"));
 
 	// Give out the index of the "serialized" object as only entry of the output byte array:
 	const int32 Index = SerializedSaveGameObjects.AddUnique(CopyOfSaveGameObject);

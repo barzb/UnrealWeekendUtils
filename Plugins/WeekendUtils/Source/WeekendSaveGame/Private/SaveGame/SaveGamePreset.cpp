@@ -153,7 +153,7 @@ USaveGame* USaveGamePreset::CreateSaveGameObject(USaveGameService& SaveGameServi
 {
 	check(SaveGame);
 	const FName SaveGameObjectName = MakeUniqueObjectName(&SaveGameService, SaveGame->GetClass(), FName("Preset"));
-	USaveGame* ActualSaveGameObject = NewObject<USaveGame>(&SaveGameService, SaveGame->GetClass(), SaveGameObjectName, RF_NoFlags, static_cast<USaveGame*>(SaveGame));
+	USaveGame* ActualSaveGameObject = DuplicateObject<USaveGame>(SaveGame, &SaveGameService, SaveGameObjectName);
 
 	UModularSaveGame* ModularSaveGame = Cast<UModularSaveGame>(ActualSaveGameObject);
 	if (const FSimpleSaveGameHeaderData* SimpleHeaderData = HeaderData.GetPtr<FSimpleSaveGameHeaderData>(); ModularSaveGame && SimpleHeaderData)
