@@ -11,7 +11,6 @@
 
 #if WITH_GAMEPLAY_DEBUGGER
  #include "GameplayDebugger/Categories/GameplayDebuggerCategory_GameFeatures.h"
- #include "GameplayDebugger/Categories/GameplayDebuggerCategory_GameServices.h"
  #include "GameplayDebugger/Categories/GameplayDebuggerCategory_InputActionAbilities.h"
  #include "GameplayDebugger/Extensions/GameplayDebuggerExtension_SelfDebugActor.h"
  #include "GameplayDebugger/Extensions/GameplayDebuggerExtension_ToggleUiVisibility.h"
@@ -20,15 +19,12 @@
 
 #define LOCTEXT_NAMESPACE "FWeekendUtilsModule"
 
-DEFINE_LOG_CATEGORY(LogGameService);
-
 void FWeekendUtilsModule::StartupModule()
 {
 #if WITH_GAMEPLAY_DEBUGGER
 	if (IGameplayDebugger::IsAvailable())
 	{
 		// Categories:
-		FGameplayDebugger::RegisterCategory<FGameplayDebuggerCategory_GameServices>();
 		FGameplayDebugger::RegisterCategory<FGameplayDebuggerCategory_GameFeatures>();
 		FGameplayDebugger::RegisterCategory<FGameplayDebuggerCategory_InputActionAbilities>();
 
@@ -45,7 +41,6 @@ void FWeekendUtilsModule::ShutdownModule()
 	if (IGameplayDebugger::IsAvailable())
 	{
 		// Categories:
-		FGameplayDebugger::UnregisterCategory<FGameplayDebuggerCategory_GameServices>();
 		FGameplayDebugger::UnregisterCategory<FGameplayDebuggerCategory_GameFeatures>();
 		FGameplayDebugger::UnregisterCategory<FGameplayDebuggerCategory_InputActionAbilities>();
 

@@ -17,15 +17,6 @@ public class WeekendUtils : ModuleRules
 
 		SetupGameplayDebuggerSupport(Target);
 
-		//PublicIncludePaths.AddRange();
-		// ... add public include paths required here ...
-
-		//PrivateIncludePaths.AddRange();
-		// ... add other private include paths required here ...
-
-		//DynamicallyLoadedModuleNames.AddRange();
-		// ... add any modules that your module loads dynamically here ...
-
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
@@ -37,35 +28,19 @@ public class WeekendUtils : ModuleRules
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"AssetRegistry",
 				"CoreUObject",
 				"Engine",
-				"GameFeatures",
-				"InputCore",
-				"Projects",
 				"EngineSettings",
-				"DeveloperSettings",
 				"EnhancedInput",
+				"GameFeatures",
 				"GameplayAbilities",
 				"GameplayTags",
 				"GameplayTasks",
-				"ModelViewViewModel",
-				"Slate",
-				"SlateCore",
+				"InputCore",
+				"Projects",
+				"Slate", "SlateCore",
 				"UMG",
 			}
 		);
-
-		if (Target.Type == TargetType.Editor)
-		{
-			PrivateDependencyModuleNames.AddRange(
-				new string[]
-				{
-					"AssetTools",
-					"Blutility",
-					"UnrealEd",
-				}
-			);
-		}
 	}
 }

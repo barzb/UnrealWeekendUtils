@@ -22,6 +22,21 @@
 			"LoadingPhase": "Default"
 		},
 		{
+			"Name": "WeekendCheatMenu",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "WeekendGameService",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "WeekendSaveGame",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
 			"Name": "WeekendUtilsTests",
 			"Type": "UncookedOnly",
 			"LoadingPhase": "Default"
