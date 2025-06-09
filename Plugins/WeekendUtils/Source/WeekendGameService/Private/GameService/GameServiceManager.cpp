@@ -359,7 +359,7 @@ UGameServiceBase* UGameServiceManager::CreateServiceInstance(UObject& Owner, con
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UGameServiceManager.CreateServiceInstance"), STAT_GameServiceManager_CreateServiceInstance, STATGROUP_GameService);
 	const FName InstanceName = MakeUniqueObjectName(&Owner, ServiceInstanceClass);
-	return NewObject<UGameServiceBase>(&Owner, ServiceInstanceClass, InstanceName, RF_NoFlags, const_cast<UGameServiceBase*>(TemplateInstance));
+	return DuplicateObject<UGameServiceBase>(TemplateInstance, &Owner, InstanceName);
 }
 
 void UGameServiceManager::StartServiceDependencies(UWorld& TargetWorld, const UGameServiceBase& ServiceInstance)
