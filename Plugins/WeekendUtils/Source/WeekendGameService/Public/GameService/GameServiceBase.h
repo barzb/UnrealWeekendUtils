@@ -86,9 +86,6 @@ protected:
 	// - FGameServiceUser
 	virtual void CheckGameServiceDependencies() const override;
 	// --
-
-	/** @returns whether this service instance has network authority (= server). #todo-multiplayer CURRENTLY NOT SUPPORTED */
-	bool HasAuthority() const { return true; }
 };
 
 inline void UGameServiceBase::CheckGameServiceDependencies() const
