@@ -24,7 +24,7 @@ void UGameServiceManager::RegisterServices(const UGameServiceConfig& Config)
 	Config.ValidateDependenciesForConfiguredServices();
 
 	int32 NumRegistrations = 0;
-	for (const auto Itr : Config.GetConfiguredServices())
+	for (const auto& Itr : Config.GetConfiguredServices())
 	{
 		const FGameServiceClass& RegisterClass = Itr.Key;
 		const FGameServiceInstanceClass& InstanceClass = Itr.Value;
@@ -359,7 +359,10 @@ UGameServiceBase* UGameServiceManager::CreateServiceInstance(UObject& Owner, con
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UGameServiceManager.CreateServiceInstance"), STAT_GameServiceManager_CreateServiceInstance, STATGROUP_GameService);
 	const FName InstanceName = MakeUniqueObjectName(&Owner, ServiceInstanceClass);
-	return DuplicateObject<UGameServiceBase>(TemplateInstance, &Owner, InstanceName);
+
+	return IsValid(TemplateInstance)
+		? DuplicateObject<UGameServiceBase>(TemplateInstance, &Owner, InstanceName)
+		: NewObject<UGameServiceBase>(&Owner, ServiceInstanceClass, InstanceName);
 }
 
 void UGameServiceManager::StartServiceDependencies(UWorld& TargetWorld, const UGameServiceBase& ServiceInstance)

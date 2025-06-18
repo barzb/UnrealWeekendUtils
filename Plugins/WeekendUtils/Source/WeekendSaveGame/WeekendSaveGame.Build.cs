@@ -29,7 +29,6 @@ public class WeekendSaveGame : ModuleRules
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"Blutility",
 				"CoreUObject",
 				"DeveloperSettings",
 				"Engine",
@@ -43,6 +42,7 @@ public class WeekendSaveGame : ModuleRules
 				new string[]
 				{
 					"AssetTools",
+					"Blutility",
 					"UnrealEd",
 				}
 			);

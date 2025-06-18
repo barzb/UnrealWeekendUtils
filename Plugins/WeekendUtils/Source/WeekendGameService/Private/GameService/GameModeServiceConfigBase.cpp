@@ -55,7 +55,7 @@ const UGameModeServiceConfigBase* UGameModeServiceConfigBase::FindConfigForWorld
 
 const UGameModeServiceConfigBase* UGameModeServiceConfigBase::FindConfigForGameModeClass(const TSubclassOf<AGameModeBase>& GameModeClass)
 {
-	for (const auto Itr : GConfigClassesByGameModes)
+	for (const auto& Itr : GConfigClassesByGameModes)
 	{
 		const TSubclassOf<AGameModeBase> ConfiguredGameMode = Itr.Key;
 		const TSubclassOf<UGameModeServiceConfigBase> ConfiguredConfig = Itr.Value;
