@@ -9,9 +9,14 @@
 
 #include "SaveGame/SaveGameUtils.h"
 
-#include "Algo/Contains.h"
+#include "Editor.h"
+#include "Engine/World.h"
 #include "GameFramework/GameModeBase.h"
+#include "GameFramework/WorldSettings.h"
+#include "HAL/FileManager.h"
 #include "Kismet/GameplayStatics.h"
+#include "Misc/ConfigCacheIni.h"
+#include "Modules/ModuleManager.h"
 #include "SaveGame/SaveGamePreset.h"
 #include "SaveGame/Settings/SaveGameServiceSettings.h"
 
@@ -131,7 +136,7 @@ bool USaveGameUtils::IsSavingAllowedForWorld(UWorld* World)
 
 #if WITH_EDITOR
 	// Since PIE adds some prefix to the actual path, only compare the asset name in editor.
-	if (Algo::ContainsBy(Settings->MapsWhereSavingIsAllowed, Level.GetAssetName(), &FSoftObjectPath::GetAssetName))
+	if (Algo::FindBy(Settings->MapsWhereSavingIsAllowed, Level.GetAssetName(), &FSoftObjectPath::GetAssetName))
 		return true;
 #else
 	if (Settings->MapsWhereSavingIsAllowed.Contains(Level))

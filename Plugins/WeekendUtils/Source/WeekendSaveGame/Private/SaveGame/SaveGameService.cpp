@@ -9,6 +9,7 @@
 
 #include "SaveGame/SaveGameService.h"
 
+#include "Engine/World.h"
 #include "GameFramework/SaveGame.h"
 #include "SaveGame/SaveGameSerializer.h"
 #include "SaveGame/SaveGameUtils.h"
@@ -63,24 +64,24 @@ FAsyncSaveGameHandle USaveGameService::RequestSaveCurrentSaveGameToSlot(const FD
 FAsyncLoadGameHandle USaveGameService::RequestLoadCurrentSaveGameFromSlot(const FDebugContext& Context, const FSlotName& SlotName)
 {
 	AddDebugEntry("RequestLoadCurrentSaveGameFromSlot", Context);
-	return EnqueueLoadRequest(SlotName, MakeShared<FLoadToCurrentSaveGameRequest>(*this, Context));
+	return EnqueueLoadRequest(SlotName, MakeShared<FLoadToCurrentSaveGameRequest>(*this, Context, SlotName));
 }
 
 FAsyncLoadGameHandle USaveGameService::RequestLoadCurrentSaveGameFromSlot(const FDebugContext& Context, const FSlotName& SlotName, const FOnSaveLoadCompleted& Callback)
 {
 	AddDebugEntry("RequestLoadCurrentSaveGameFromSlot", Context);
-	return EnqueueLoadRequest(SlotName, MakeShared<FLoadToCurrentSaveGameRequest>(*this, Context, Callback));
+	return EnqueueLoadRequest(SlotName, MakeShared<FLoadToCurrentSaveGameRequest>(*this, Context, Callback, SlotName));
 }
 
 FAsyncLoadGameHandle USaveGameService::RequestLoadAndTravelIntoCurrentSaveGameFromSlot(const FDebugContext& Context, const FSlotName& SlotName)
 {
 	AddDebugEntry("RequestLoadAndTravelIntoCurrentSaveGameFromSlot", Context);
-	return EnqueueLoadRequest(SlotName, MakeShared<FLoadAndTravelIntoToCurrentSaveGameRequest>(*this, Context));
+	return EnqueueLoadRequest(SlotName, MakeShared<FLoadAndTravelIntoToCurrentSaveGameRequest>(*this, Context, SlotName));
 }
 
 FAsyncLoadGameHandle USaveGameService::RequestLoadAndTravelIntoCurrentSaveGameFromSlot(const FDebugContext& Context, const FSlotName& SlotName, const FOnSaveLoadCompleted& Callback)
 {
-	return EnqueueLoadRequest(SlotName, MakeShared<FLoadAndTravelIntoToCurrentSaveGameRequest>(*this, Context, Callback));
+	return EnqueueLoadRequest(SlotName, MakeShared<FLoadAndTravelIntoToCurrentSaveGameRequest>(*this, Context, Callback, SlotName));
 }
 
 bool USaveGameService::IsSaveRequestAlive(const FAsyncSaveGameHandle& Handle) const
@@ -213,15 +214,14 @@ TSet<USaveGame*> USaveGameService::PreloadSaveGamesSynchronous(const TSet<FSlotN
 	SetStatus(EStatus::Loading);
 	AddDebugEntry("[PreloadSaveGamesSynchronous] " + FString::Join(SlotNames, TEXT(", ")));
 
-	CachedSaveGames.Empty();
+	CachedSaveGames.Clear();
 	for (const FSlotName& SlotName : SlotNames)
 	{
 		if (!DoesSaveFileExist(SlotName))
 			continue;
-
 		if (USaveGame* LoadedSaveGame = PerformSyncLoad(SlotName))
 		{
-			CachedSaveGames.Add(SlotName, TStrongObjectPtr(LoadedSaveGame));
+			CachedSaveGames.CopyToCache(*this, SlotName, *LoadedSaveGame);
 			Result.Add(LoadedSaveGame);
 		}
 	}
@@ -234,39 +234,52 @@ TSet<USaveGame*> USaveGameService::PreloadSaveGamesSynchronous(const TSet<FSlotN
 
 void USaveGameService::PreloadSaveGamesAsync(const TSet<FSlotName>& SlotNames, const FOnPreloadCompleted& Callback)
 {
-	CachedSaveGames.Empty();
+	CachedSaveGames.Clear();
 	if (SlotNames.IsEmpty())
 	{
-		Callback.ExecuteIfBound({});
+		Callback.ExecuteIfBound({}, {});
 		return;
 	}
 
 	class FPreloadRequest : public ISaveLoadRequest
 	{
 	public:
-		explicit FPreloadRequest(USaveGameService& InService, const TSharedRef<int32>& InRemainingSlots, const TSharedRef<TSet<USaveGame*>>& InResult, const FOnPreloadCompleted& InCallback) :
-			ISaveLoadRequest(InService, ""), RemainingSlots(InRemainingSlots), Result(InResult), Callback(InCallback) {}
+		explicit FPreloadRequest(USaveGameService& InService,
+			const FSlotName& SlotName,
+			const TSharedRef<int32>& InRemainingSlots,
+			const TSharedRef<TSet<USaveGame*>>& InResultSaveGames,
+			const TSharedRef<TSet<FSlotName>>& InResultSlotNames,
+			const FOnPreloadCompleted& InCallback) :
+				ISaveLoadRequest(InService, "", SlotName),
+				RemainingSlots(InRemainingSlots),
+				ResultSaveGames(InResultSaveGames),
+				ResultSlotNames(InResultSlotNames),
+				Callback(InCallback) {}
+
 		virtual void Finish(USaveGame* RequestedSaveGame, bool bSuccess) override
 		{
 			Runtime = FPlatformTime::Seconds() - StartTime;
 			if (bSuccess)
 			{
-				Result->Add(RequestedSaveGame);
+				ResultSaveGames->Add(RequestedSaveGame);
+				ResultSlotNames->Add(*SlotName);
 			}
 			if (--(*RemainingSlots) <= 0)
 			{
 				Service.AddDebugEntry("PreloadSaveGamesAsync", "FPreloadRequest::Finish", bSuccess, Runtime);
-				Callback.ExecuteIfBound(*Result);
+				Callback.ExecuteIfBound(ResultSaveGames->Array(), ResultSlotNames->Array());
 			}
 		}
 
 		TSharedRef<int32> RemainingSlots;
-		TSharedRef<TSet<USaveGame*>> Result;
+		TSharedRef<TSet<USaveGame*>> ResultSaveGames;
+		TSharedRef<TSet<FSlotName>> ResultSlotNames;
 		FOnPreloadCompleted Callback;
 	};
 
 	TSharedRef<int32> RemainingSlots = MakeShared<int32>(0);
-	TSharedRef<TSet<USaveGame*>> Results = MakeShared<TSet<USaveGame*>>();
+	TSharedRef<TSet<USaveGame*>> ResultSaveGames = MakeShared<TSet<USaveGame*>>();
+	TSharedRef<TSet<FSlotName>> ResultSlotNames = MakeShared<TSet<FSlotName>>();
 
 	TMap<FSlotName, TSharedRef<FPreloadRequest>> Requests = {};
 	for (const FSlotName& SlotName : SlotNames)
@@ -275,7 +288,7 @@ void USaveGameService::PreloadSaveGamesAsync(const TSet<FSlotName>& SlotNames, c
 			continue;
 
 		(*RemainingSlots)++;
-		Requests.Add(SlotName, MakeShared<FPreloadRequest>(*this, RemainingSlots, Results, Callback));
+		Requests.Add(SlotName, MakeShared<FPreloadRequest>(*this, SlotName, RemainingSlots, ResultSaveGames, ResultSlotNames, Callback));
 	}
 
 	for (auto SlotAndRequest = Requests.CreateIterator(); SlotAndRequest; ++SlotAndRequest)
@@ -286,10 +299,7 @@ void USaveGameService::PreloadSaveGamesAsync(const TSet<FSlotName>& SlotNames, c
 
 void USaveGameService::RestoreAsCurrentSaveGame(USaveGame& SaveGame, TOptional<FSlotName> LoadedFromSlotName)
 {
-	if (!LoadedFromSlotName.IsSet())
-	{
-		LoadedFromSlotName = FindSlotName(SaveGame);
-	}
+	checkf(!IsCachedSaveGameSnapshot(SaveGame), TEXT("Restoring cached SaveGame snapshots is now allowed. Use runtime versions or restore by slot"));
 
 	AddDebugEntry("[RestoreAsCurrentSaveGame]");
 	SetCurrentSaveGame(FCurrentSaveGame::CreateFromLoadedGame(SaveGame, LoadedFromSlotName));
@@ -298,6 +308,8 @@ void USaveGameService::RestoreAsCurrentSaveGame(USaveGame& SaveGame, TOptional<F
 
 void USaveGameService::RestoreAsAndTravelIntoCurrentSaveGame(USaveGame& SaveGame, TOptional<FSlotName> LoadedFromSlotName)
 {
+	checkf(!IsCachedSaveGameSnapshot(SaveGame), TEXT("Restoring cached SaveGame snapshots is now allowed. Use runtime versions or restore by slot"));
+
 	RestoreAsCurrentSaveGame(SaveGame, LoadedFromSlotName);
 	TryTravelIntoCurrentSaveGame();
 }
@@ -328,6 +340,21 @@ void USaveGameService::CreateAndRestoreNewSaveGameAsCurrent()
 	USaveGame& SaveGameObject = SaveLoadBehavior->CreateNewSavegameObject(*this);
 	SetCurrentSaveGame(FCurrentSaveGame::CreateFromNewGame(SaveGameObject));
 	OnAfterRestored.Broadcast(CurrentSaveGame);
+}
+
+void USaveGameService::DeleteSaveGameAtSlot(const FSlotName& SlotName, bool bMoveToBackupFolder)
+{
+	if (!CachedSaveGames.Contains(SlotName))
+		return;
+ 
+	if (DoesSaveFileExist(SlotName))
+	{
+		SaveGameSerializer->TryDeleteGameInSlot(SlotName, GetCurrentUserIndex(),
+			bMoveToBackupFolder ? FString("Backup_" + FDateTime::Now().ToString()) : TOptional<FString>{});
+	}
+ 
+	CachedSaveGames.Remove(SlotName);
+	OnAvailableSaveGamesChanged.Broadcast();
 }
 
 void USaveGameService::ProcessPendingRequests()
@@ -475,7 +502,7 @@ USaveLoadBehavior& USaveGameService::CreateSaveLoadBehavior(const USaveGameServi
 	TSoftClassPtr<USaveLoadBehavior> BehaviorClass = Settings.SaveLoadBehavior;
 
 #if WITH_EDITORONLY_DATA
-	BehaviorClass = (GetWorld()->WorldType == EWorldType::PIE)
+	BehaviorClass = (!GetWorld() || GetWorld()->WorldType == EWorldType::PIE)
 		? Settings.PlayInEditorSaveLoadBehavior
 		: Settings.PlayInStandaloneSaveLoadBehavior;
 #endif
@@ -552,7 +579,7 @@ void USaveGameService::ShutdownService()
 	}
 
 	CurrentSaveGame.Reset();
-	CachedSaveGames.Empty();
+	CachedSaveGames.Clear();
 
 	PendingSaveRequestsBySlot.Empty();
 	PendingLoadRequestsBySlot.Empty();
@@ -593,7 +620,7 @@ FAsyncLoadGameHandle USaveGameService::EnqueueLoadRequest(const FSlotName& SlotN
 
 	if (CachedSaveGames.Contains(SlotName))
 	{
-		Request->Finish(CachedSaveGames[SlotName].Get(), true);
+		Request->Finish(CachedSaveGames.CopyFromCache(*this, SlotName), true);
 	}
 	else
 	{
@@ -625,18 +652,19 @@ TOptional<USaveGameService::FSlotName> USaveGameService::GetMostRecentlySavedSlo
 	return CurrentSaveGame.GetSlotLastSavedTo();
 }
 
-TOptional<USaveGameService::FSlotName> USaveGameService::FindSlotName(const USaveGame& SaveGame) const
+const USaveGame* USaveGameService::GetCachedSaveGameSnapshotAtSlot(const FSlotName& SlotName) const
 {
-	const FSlotName* FoundSlotName = CachedSaveGames.FindKey(TStrongObjectPtr(const_cast<USaveGame*>(&SaveGame)));
-	return (FoundSlotName ? *FoundSlotName : TOptional<FSlotName>());
+	return CachedSaveGames.Find(SlotName);
 }
 
-const USaveGame* USaveGameService::GetCachedSaveGameAtSlot(const FSlotName& SlotName) const
+TMap<USaveGameService::FSlotName, const USaveGame*> USaveGameService::GetAllCachedSaveGameSnapshots() const
 {
-	if (!CachedSaveGames.Contains(SlotName))
-		return nullptr;
+	return CachedSaveGames.GetAllObjectsBySlot();
+}
 
-	return CachedSaveGames[SlotName].Get();
+bool USaveGameService::IsCachedSaveGameSnapshot(const USaveGame& SaveGameObject) const
+{
+	return CachedSaveGames.GetAllObjectsBySlot().FindKey(&SaveGameObject) != nullptr;
 }
 
 bool USaveGameService::DoesSaveFileExist(const FSlotName& SlotName) const
@@ -680,16 +708,9 @@ void USaveGameService::PerformAsyncSave(const FSlotName& SlotName)
 
 	SetStatus(EStatus::Saving);
 
-	if (CachedSaveGames.Num() > 0 && !CachedSaveGames.Contains(SlotName))
-	{
-		CreateNewSaveGameAsCurrent();
-	}
-
 	// Last chance to populate the save game with data:
 	OnBeforeSaved.Broadcast(CurrentSaveGame);
 
-	CachedSaveGames.Add(SlotName, TStrongObjectPtr(CurrentSaveGame.GetMutablePtr()));
-	OnAvailableSaveGamesChanged.Broadcast();
 	SaveGameSerializer->AsyncSaveGameToSlot(CurrentSaveGame.GetRef(), SlotName, UserIndex,
 		USaveGameSerializer::FOnAsyncSaveCompleted::CreateUObject(this, &ThisClass::HandleAsyncSaveCompleted));
 }
@@ -698,6 +719,10 @@ void USaveGameService::HandleAsyncSaveCompleted(const FSlotName& SlotName, const
 {
 	CurrentSaveGame.UpdateTimeOfLastSave();
 	CurrentSaveGame.SetSlotLastSavedTo(SlotName);
+
+	// Cache current save game as snapshot copy, so it can be restored as the state it was saved in:
+	CachedSaveGames.CopyToCache(*this, SlotName, CurrentSaveGame.GetRef());
+	OnAvailableSaveGamesChanged.Broadcast();
 
 	ConsumeSaveRequestsInProgress(CurrentSaveGame.GetMutablePtr(), bSuccess);
 
@@ -725,7 +750,7 @@ USaveGame* USaveGameService::PerformSyncLoad(const FSlotName& SlotName)
 	SaveGameSerializer->TryLoadGameFromSlot(SlotName, UserIndex, OUT LoadedSaveGame);
 	if (LoadedSaveGame && !CachedSaveGames.Contains(SlotName))
 	{
-		CachedSaveGames.Add(SlotName, TStrongObjectPtr(LoadedSaveGame));
+		CachedSaveGames.CopyToCache(*this, SlotName, *LoadedSaveGame);
 		OnAvailableSaveGamesChanged.Broadcast();
 	}
 
@@ -736,7 +761,7 @@ void USaveGameService::HandleAsyncLoadCompleted(const FSlotName& SlotName, const
 {
 	if (LoadedSaveGame && !CachedSaveGames.Contains(SlotName))
 	{
-		CachedSaveGames.Add(SlotName, TStrongObjectPtr(LoadedSaveGame));
+		CachedSaveGames.CopyToCache(*this, SlotName, *LoadedSaveGame);
 		OnAvailableSaveGamesChanged.Broadcast();
 	}
 
@@ -802,7 +827,52 @@ void USaveGameService::AddDebugEntry(const FString& Operation, const FDebugConte
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
+/// CACHE
+
+bool USaveGameService::FSaveGamesCache::Contains(const FSlotName& SlotName) const
+{
+	return SnapshotsBySlot.Num() > 0 && SnapshotsBySlot.Contains(SlotName);
+}
+
+void USaveGameService::FSaveGamesCache::Remove(const FSlotName& SlotName)
+{
+	SnapshotsBySlot.Remove(SlotName);
+}
+
+void USaveGameService::FSaveGamesCache::Clear()
+{
+	SnapshotsBySlot.Empty();
+}
+
+void USaveGameService::FSaveGamesCache::CopyToCache(USaveGameService& InService, const FSlotName& SlotName, const USaveGame& SaveGame)
+{
+	const USaveGame& Copy = InService.SaveLoadBehavior->DuplicateSaveGameObject(InService, SaveGame);
+	SnapshotsBySlot.FindOrAdd(SlotName) = TStrongObjectPtr(&Copy);
+}
+
+USaveGame* USaveGameService::FSaveGamesCache::CopyFromCache(USaveGameService& InService, const FSlotName& SlotName) const
+{
+	if (!Contains(SlotName))
+		return nullptr;
+	USaveGame& Copy = InService.SaveLoadBehavior->DuplicateSaveGameObject(InService, *SnapshotsBySlot[SlotName].Get());
+	return &Copy;
+}
+
+const USaveGame* USaveGameService::FSaveGamesCache::Find(const FSlotName& SlotName) const
+{
+	return SnapshotsBySlot.Contains(SlotName) ? SnapshotsBySlot[SlotName].Get() : nullptr;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////
 /// REQUESTS
+
+TMap<USaveGameService::FSlotName, const USaveGame*> USaveGameService::FSaveGamesCache::GetAllObjectsBySlot() const
+{
+	TMap<FSlotName, const USaveGame*> Result;
+	Algo::Transform(SnapshotsBySlot, OUT Result,
+		[](const TPair<FSlotName, TStrongObjectPtr<const USaveGame>>& Itr){ return TPair<FSlotName, const USaveGame*>(Itr.Key, Itr.Value.Get()); });
+	return Result;
+}
 
 void USaveGameService::ISaveLoadRequest::Process()
 {
@@ -821,7 +891,7 @@ void USaveGameService::FLoadToCurrentSaveGameRequest::Finish(USaveGame* Requeste
 {
 	if (bSuccess)
 	{
-		Service.RestoreAsCurrentSaveGame(*RequestedSaveGame);
+		Service.RestoreAsCurrentSaveGame(*RequestedSaveGame, SlotName);
 	}
 
 	Runtime = FPlatformTime::Seconds() - StartTime;
@@ -833,7 +903,7 @@ void USaveGameService::FLoadAndTravelIntoToCurrentSaveGameRequest::Finish(USaveG
 {
 	if (bSuccess)
 	{
-		Service.RestoreAsAndTravelIntoCurrentSaveGame(*RequestedSaveGame);
+		Service.RestoreAsAndTravelIntoCurrentSaveGame(*RequestedSaveGame, SlotName);
 	}
 
 	Runtime = FPlatformTime::Seconds() - StartTime;

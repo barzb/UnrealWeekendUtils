@@ -14,7 +14,7 @@
 void USaveGameSlotViewModel::BindToModel(const FSlotName& SlotName, USaveGameService& SaveGameService, bool bCanSave, bool bCanLoad)
 {
 	BoundSlotName = SlotName;
-	if (const USaveGame* SaveGame = SaveGameService.GetCachedSaveGameAtSlot(SlotName))
+	if (const USaveGame* SaveGame = SaveGameService.GetCachedSaveGameSnapshotAtSlot(SlotName))
 	{
 		BindToSaveGame(SlotName, *SaveGame);
 	}
@@ -37,5 +37,6 @@ bool USaveGameSlotViewModel::TryLoadGameFromSlot()
 
 bool USaveGameSlotViewModel::TrySaveGameToSlot()
 {
+	ensureMsgf(!BoundSlotName.IsEmpty(), TEXT("SlotName should not be empty when trying to SaveGameToSlot"));
 	return (OnSaveRequested.IsBound() && OnSaveRequested.Execute(BoundSlotName));
 }

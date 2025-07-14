@@ -63,6 +63,9 @@ public:
 	/** Factory method called by @USaveGameService to create new SaveGame objects. Default = @UModularSaveGame. */
 	virtual USaveGame& CreateNewSavegameObject(USaveGameService& SaveGameService) const;
 
+	/** Called by @USaveGameService to create copies of SaveGames as snapshots. Default = @UModularSaveGame. */
+	virtual USaveGame& DuplicateSaveGameObject(USaveGameService& SaveGameService, const USaveGame& SaveGameToCopy) const;
+
 	/** @returns the class that defines how the save game data will be read-from and written-to a physical file. */
 	virtual TSubclassOf<USaveGameSerializer> GetSaveGameSerializerClass() const;
 
@@ -98,7 +101,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Weekend Utils|Save Game")
 	TSet<FString> SaveSlotNames;
 
-	virtual void HandlePreloadCompleted(USaveGameService& SaveGameService, const TSet<USaveGame*>& SaveGames);
+	virtual void HandlePreloadCompleted(USaveGameService& SaveGameService, TArray<USaveGame*> PreloadedSaveGames, TArray<FSlotName> PreloadedSlotNames);
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////

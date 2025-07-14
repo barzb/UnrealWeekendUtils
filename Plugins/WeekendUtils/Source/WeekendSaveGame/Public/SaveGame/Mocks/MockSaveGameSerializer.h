@@ -41,6 +41,6 @@ public:
 	virtual void AsyncSaveGameToSlot(USaveGame& SaveGameObject, const FSlotName& SlotName, const int32 UserIndex, FOnAsyncSaveCompleted Callback) override;
 	virtual bool TryLoadDataFromSlot(const FSlotName& SlotName, const int32 UserIndex, TArray<uint8>& OutSaveData) override;
 	virtual void AsyncLoadGameFromSlot(const FSlotName& SlotName, const int32 UserIndex, FOnAsyncLoadCompleted Callback) override;
-	virtual bool TryDeleteGameInSlot(const FSlotName& SlotName, const int32 UserIndex) override;
+	virtual bool TryDeleteGameInSlot(const FSlotName& SlotName, const int32 UserIndex, TOptional<FString> OptionalBackupFolder) override;
 	// --
 };

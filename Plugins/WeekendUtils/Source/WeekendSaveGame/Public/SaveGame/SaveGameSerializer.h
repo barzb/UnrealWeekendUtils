@@ -35,7 +35,7 @@ struct WEEKENDSAVEGAME_API FWeekendUtilsSubobjectProxyArchive : FObjectAndNameAs
 
 /**
  * Polymorphic sub-object of @USaveGameService that extracts implementation details of
- * SaveGame serialization, deserialization and save file management.
+ * SaveGame serialization, deserialization, and save file management.
  * The base implementation forwards (or copies) calls of @UGameplayStatics.
  */
 UCLASS()
@@ -62,5 +62,5 @@ public:
 	virtual bool TryLoadGameFromSlot(const FSlotName& SlotName, const int32 UserIndex, USaveGame*& OutSaveGameObject);
 	virtual void AsyncLoadGameFromSlot(const FSlotName& SlotName, const int32 UserIndex, FOnAsyncLoadCompleted Callback);
 
-	virtual bool TryDeleteGameInSlot(const FSlotName& SlotName, const int32 UserIndex);
+	virtual bool TryDeleteGameInSlot(const FSlotName& SlotName, const int32 UserIndex, TOptional<FString> OptionalBackupFolder = {});
 };

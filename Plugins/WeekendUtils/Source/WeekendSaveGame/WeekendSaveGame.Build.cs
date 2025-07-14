@@ -32,6 +32,8 @@ public class WeekendSaveGame : ModuleRules
 				"CoreUObject",
 				"DeveloperSettings",
 				"Engine",
+				"Slate",
+				"SlateCore",
 				"WeekendCheatMenu",
 			}
 		);
@@ -43,6 +45,7 @@ public class WeekendSaveGame : ModuleRules
 				{
 					"AssetTools",
 					"Blutility",
+					"DesktopPlatform",
 					"UnrealEd",
 				}
 			);
