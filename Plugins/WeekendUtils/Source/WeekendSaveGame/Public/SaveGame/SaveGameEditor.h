@@ -40,15 +40,19 @@ protected:
 	// --
 
 	/** Creates a new @USaveGamePreset data asset based on the currently edited SaveGame. */
-	UFUNCTION(CallInEditor, Category = "Editor", meta = (DevelopmentOnly))
+	UFUNCTION(CallInEditor, Category = "Editor", meta = (DevelopmentOnly), DisplayName = "Convert To Preset")
 	virtual void ConvertToPreset();
 
 	/** Attempts to show the actively loaded SaveGame in this editor window. Game must be running. */
-	UFUNCTION(CallInEditor, Category = "Editor", meta = (DevelopmentOnly))
+	UFUNCTION(CallInEditor, Category = "Editor", meta = (DevelopmentOnly), DisplayName = "Edit Current SaveGame")
 	virtual void EditCurrentSaveGame();
 
+	/** Attempts to load a compatible SaveGame file into this editor window. The loaded file does not affect any running sessions. */
+	UFUNCTION(CallInEditor, Category = "Editor", meta = (DevelopmentOnly), DisplayName = "Edit SaveGame File")
+	virtual void EditSaveGameFromFile();
+
 #if WITH_EDITORONLY_DATA
-	virtual void SetSaveGame(const USaveGame* InSaveGame);
+	virtual void SetSaveGame(const USaveGame* InSaveGame, TOptional<FString> OptionalInfo = {});
 
 	UPROPERTY(VisibleAnywhere, Transient, Category = "Editor")
 	FString EditorInfo = FString();

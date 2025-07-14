@@ -63,7 +63,7 @@ void UMockSaveGameSerializer::AsyncLoadGameFromSlot(const FSlotName& SlotName, c
 	Callback.ExecuteIfBound(SlotName, UserIndex, SaveGame);
 }
 
-bool UMockSaveGameSerializer::TryDeleteGameInSlot(const FSlotName& SlotName, const int32 UserIndex)
+bool UMockSaveGameSerializer::TryDeleteGameInSlot(const FSlotName& SlotName, const int32 UserIndex, TOptional<FString> OptionalBackupFolder)
 {
 	return (PretendedSaveGamesOnDisk.Remove(SlotName) > 0);
 }

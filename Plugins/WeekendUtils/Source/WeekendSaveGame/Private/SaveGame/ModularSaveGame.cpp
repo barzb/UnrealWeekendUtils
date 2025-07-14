@@ -101,7 +101,7 @@ bool FModularSaveGameHeader::TryRead(FMemoryReader& MemoryReader)
 
 	// Read custom version data:
 	MemoryReader << CustomVersionFormat;
-	CustomVersions.Serialize(MemoryReader, static_cast<ECustomVersionSerializationFormat>(CustomVersionFormat));
+	CustomVersions.Serialize(MemoryReader, static_cast<ECustomVersionSerializationFormat::Type>(CustomVersionFormat));
 	MemoryReader.SetCustomVersions(CustomVersions);
 
 	// Read out custom header data:
@@ -126,7 +126,7 @@ bool FModularSaveGameHeader::TryWrite(FMemoryWriter& MemoryWriter)
 
 	// Write out custom version data:
 	MemoryWriter << CustomVersionFormat;
-	CustomVersions.Serialize(MemoryWriter, static_cast<ECustomVersionSerializationFormat>(CustomVersionFormat));
+	CustomVersions.Serialize(MemoryWriter, static_cast<ECustomVersionSerializationFormat::Type>(CustomVersionFormat));
 
 	// Write custom header data:
 	MemoryWriter << SaveGameClassName;
@@ -198,6 +198,9 @@ bool UModularSaveGameSerializer::TryDeserializeSaveGame(const TArray<uint8>& InS
 	{
 		SaveGameClass = LoadObject<UClass>(nullptr, *SaveHeader.SaveGameClassName);
 	}
+
+	if (!SaveGameClass)
+		return false;
 
 	// Create (empty) save game object and then restore all of its saved properties:
 	OutSaveGameObject = NewObject<USaveGame>(GetOuter(), SaveGameClass);

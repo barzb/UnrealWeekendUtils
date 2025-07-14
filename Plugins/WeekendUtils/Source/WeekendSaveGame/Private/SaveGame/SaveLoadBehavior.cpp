@@ -9,9 +9,9 @@
 
 #include "SaveGame/SaveLoadBehavior.h"
 
+#include "Engine/World.h"
 #include "HAL/FileManager.h"
 #include "Kismet/GameplayStatics.h"
-#include "Misc/Paths.h"
 #include "SaveGame/ModularSaveGame.h"
 #include "SaveGame/SaveGamePreset.h"
 #include "SaveGame/SaveGameService.h"
@@ -75,6 +75,15 @@ USaveGame& USaveLoadBehavior::CreateNewSavegameObject(USaveGameService& SaveGame
 	return *ModularSaveGame;
 }
 
+USaveGame& USaveLoadBehavior::DuplicateSaveGameObject(USaveGameService& SaveGameService, const USaveGame& SaveGameToCopy) const
+{
+	const UModularSaveGame* ModularSaveToDuplicate = CastChecked<UModularSaveGame>(&SaveGameToCopy);
+	UModularSaveGame* Duplicate = DuplicateObject<UModularSaveGame>(ModularSaveToDuplicate, &SaveGameService);
+	Duplicate->SetInstancedHeaderData(FInstancedStruct(*ModularSaveToDuplicate->GetInstancedHeaderData()));
+
+	return *Duplicate;
+}
+
 TSubclassOf<USaveGameSerializer> USaveLoadBehavior::GetSaveGameSerializerClass() const
 {
 	return UModularSaveGameSerializer::StaticClass();
@@ -124,13 +133,12 @@ UDefaultSaveLoadBehavior::UDefaultSaveLoadBehavior()
 
 void UDefaultSaveLoadBehavior::HandleGameStart(USaveGameService& SaveGameService)
 {
-	SaveGameService.PreloadSaveGamesAsync(GetSaveSlotNamesAllowedForLoading(), FOnPreloadCompleted::CreateWeakLambda(this,
-		[this, SaveGameService = MakeWeakObjectPtr(&SaveGameService)](const TSet<USaveGame*>& PreloadedSaveGames)
+	SaveGameService.PreloadSaveGamesAsync(GetSaveSlotNamesAllowedForLoading(), USaveGameService::FOnPreloadCompleted::CreateWeakLambda(this,
+		[this, SaveGameService = MakeWeakObjectPtr(&SaveGameService)](const TArray<USaveGame*>& PreloadedSaveGames, const TArray<FSlotName>& PreloadedSlotNames)
 		{
 			if (!SaveGameService.IsValid())
 				return;
-
-			HandlePreloadCompleted(*SaveGameService, PreloadedSaveGames);
+			HandlePreloadCompleted(*SaveGameService, PreloadedSaveGames, PreloadedSlotNames);
 		}));
 }
 
@@ -146,33 +154,34 @@ TSet<USaveLoadBehavior::FSlotName> UDefaultSaveLoadBehavior::GetSaveSlotNamesAll
 	return Result;
 }
 
-void UDefaultSaveLoadBehavior::HandlePreloadCompleted(USaveGameService& SaveGameService, const TSet<USaveGame*>& SaveGames)
+void UDefaultSaveLoadBehavior::HandlePreloadCompleted(USaveGameService& SaveGameService, TArray<USaveGame*> PreloadedSaveGames, TArray<FSlotName> PreloadedSlotNames)
 {
 	// Attempt to find and restore the most "recent" save game:
 
 	TOptional<FDateTime> MostRecentSaveTime = {};
-	TOptional<USaveGame*> MostRecentSaveGame = {};
-	for (USaveGame* SaveGame : SaveGames)
+	TOptional<TPair<FSlotName, USaveGame*>> MostRecentSaveGame = {};
+	for (int32 i = 0; i < PreloadedSaveGames.Num(); ++i)
 	{
-		if (!SaveGame)
+		if (!PreloadedSaveGames[i])
 			continue;
 
-		TOptional<FDateTime> TimeOfLastSave = FindTimeOfLastSaveFromSaveGame(*SaveGame);
+		TOptional<FDateTime> TimeOfLastSave = FindTimeOfLastSaveFromSaveGame(*PreloadedSaveGames[i]);
 		if (!TimeOfLastSave.IsSet())
 			continue;
 
 		if (!MostRecentSaveTime.IsSet() || ((*TimeOfLastSave) > (*MostRecentSaveTime)))
 		{
 			MostRecentSaveTime = TimeOfLastSave;
-			MostRecentSaveGame = SaveGame;
+			MostRecentSaveGame = { PreloadedSlotNames[i], PreloadedSaveGames[i] };
 		}
 	}
 
 	if (MostRecentSaveGame.IsSet())
 	{
+		USaveGame* SaveGameToMakeCurrent = MostRecentSaveGame->Value;
 		UE_LOG(LogSaveLoadBehavior, Log, TEXT("Preload completed. Loading most recent save game (%s), saved on (UTC) %s"),
-			*GetNameSafe(*MostRecentSaveGame), *MostRecentSaveTime->ToString());
-		SaveGameService.RestoreAsCurrentSaveGame(**MostRecentSaveGame);
+			*GetNameSafe(SaveGameToMakeCurrent), *MostRecentSaveTime->ToString());
+		SaveGameService.RestoreAsCurrentSaveGame(*SaveGameToMakeCurrent, MostRecentSaveGame->Key);
 	}
 }
 
@@ -219,5 +228,7 @@ USaveLoadBehavior::FSlotName UDefaultPlayInEditorSaveLoadBehavior::GetPlayInEdit
 	bool bUseOverrideSlot = false;
 	FSlotName OverrideSlotName = "";
 	USaveGameUtils::GetOverridePlayInEditorSaveGameSlot(OUT bUseOverrideSlot, OUT OverrideSlotName);
-	return (bUseOverrideSlot ? OverrideSlotName : GetDefault<USaveGameServiceSettings>()->DefaultPlayInEditorSaveGameSlotName);
+	return (bUseOverrideSlot && !OverrideSlotName.IsEmpty())
+		? OverrideSlotName
+		: GetDefault<USaveGameServiceSettings>()->DefaultPlayInEditorSaveGameSlotName;
 }

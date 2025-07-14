@@ -177,7 +177,15 @@ void USaveGameSerializer::AsyncLoadGameFromSlot(const FSlotName& SlotName, const
 	}
 }
 
-bool USaveGameSerializer::TryDeleteGameInSlot(const FSlotName& SlotName, const int32 UserIndex)
+bool USaveGameSerializer::TryDeleteGameInSlot(const FSlotName& SlotName, const int32 UserIndex, TOptional<FString> OptionalBackupFolder)
 {
+	if (OptionalBackupFolder.IsSet())
+	{
+		const FString SourceFilePath = FString(FPaths::ProjectSavedDir() / "SaveGames" / SlotName + ".sav");
+		const FString BackupFilePath = FString(FPaths::ProjectSavedDir() / "SaveGames" / *OptionalBackupFolder / SlotName + ".sav");
+		if (IFileManager::Get().Move(*BackupFilePath, *SourceFilePath, true))
+			return true;
+	}
+
 	return UGameplayStatics::DeleteGameInSlot(SlotName, UserIndex);
 }

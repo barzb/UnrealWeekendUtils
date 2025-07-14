@@ -12,6 +12,7 @@
 #include "CoreMinimal.h"
 #include "MVVMViewModelBase.h"
 #include "GameService/GameServiceUser.h"
+#include "Templates/SubclassOf.h"
 
 #include "SaveGameListViewModel.generated.h"
 

@@ -64,7 +64,7 @@ WE_END_DEFINE_SPEC(SaveGameService)
 
 			USaveGame* SaveGamePassedByCallback = nullptr;
 			TSharedRef<bool> bWasCallbackCalledWithSuccess = MakeShared<bool>(false);
-			SaveGameService->RequestAutosave("Test", FOnSaveLoadCompleted::CreateLambda([&](USaveGame* SavedGame, bool bSuccess)
+			SaveGameService->RequestAutosave("Test", USaveGameService::FOnSaveLoadCompleted::CreateLambda([&](USaveGame* SavedGame, bool bSuccess)
 			{
 				SaveGamePassedByCallback = SavedGame;
 				*bWasCallbackCalledWithSuccess = bSuccess;
@@ -95,7 +95,7 @@ WE_END_DEFINE_SPEC(SaveGameService)
 
 			USaveGame* SaveGamePassedByCallback = nullptr;
 			TSharedRef<bool> bWasCallbackCalledWithSuccess = MakeShared<bool>(false);
-			SaveGameService->RequestSaveCurrentSaveGameToSlot("Test", TestSlotName, FOnSaveLoadCompleted::CreateLambda([&](USaveGame* SavedGame, bool bSuccess)
+			SaveGameService->RequestSaveCurrentSaveGameToSlot("Test", TestSlotName, USaveGameService::FOnSaveLoadCompleted::CreateLambda([&](USaveGame* SavedGame, bool bSuccess)
 			{
 				SaveGamePassedByCallback = SavedGame;
 				*bWasCallbackCalledWithSuccess = bSuccess;
@@ -112,7 +112,7 @@ WE_END_DEFINE_SPEC(SaveGameService)
 
 			SaveGameService->RequestSaveCurrentSaveGameToSlot("Test", TestSlotName);
 
-			const USaveGame* CachedSaveGame = SaveGameService->GetCachedSaveGameAtSlot(TestSlotName);
+			const USaveGame* CachedSaveGame = SaveGameService->GetCachedSaveGameSnapshotAtSlot(TestSlotName);
 			TestNotNull("CachedSaveGame", CachedSaveGame);
 		});
 	});
