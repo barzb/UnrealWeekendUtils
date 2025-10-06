@@ -16,15 +16,35 @@ namespace WeekendUtils
 	namespace SpecStringUtils
 	{
 		/**
+		 * Alternative implementation of ToString for float which doesn't introduce weird sub-categories
+		 * based on '.' characters in the session frontend when used in automation spec Describe parameters.
+		 * e.g. Describe(FString::Printf(TEXT("%s"), *SpecStringUtils::ToString(2.3f)), [this](){ ... });
+		 */
+		FORCEINLINE FString ToString(const float Float)
+		{
+			return (FMath::Sign(Float) == 1.f ? "" : "-")
+				+ FString::FromInt(StaticCast<int>(FMath::Abs(Float))) + ","
+				+ FString::FromInt(StaticCast<int>(FMath::Frac(Float) * 10));
+		}
+		
+		/**
+		 * Alternative implementation of ToString for double which doesn't introduce weird sub-categories
+		 * based on '.' characters in the session frontend when used in automation spec Describe parameters.
+		 * e.g. Describe(FString::Printf(TEXT("%s"), *SpecStringUtils::ToString(2.3f)), [this](){ ... });
+		 */
+		FORCEINLINE FString ToString(const double Double)
+		{
+			return FString::FromInt(StaticCast<int>(Double)) + "," + FString::FromInt(StaticCast<int>(FMath::Frac(Double) * 10));
+		}
+		
+		/**
 		 * Alternative implementation of ToString for FVector2 which doesn't introduce weird sub-categories
 		 * based on '.' characters in the session frontend when used in automation spec Describe parameters.
 		 * e.g. Describe(FString::Printf(TEXT("%s"), *SpecStringUtils::ToString(Vector)), [this](){ ... });
 		 */
 		FORCEINLINE FString ToString(const FVector2f& Vector)
 		{
-			return { "(" +
-				FString::FromInt(StaticCast<int>(Vector.X)) + "," + FString::FromInt(StaticCast<int>(FMath::Frac(Vector.X) * 10)) + " | " +
-				FString::FromInt(StaticCast<int>(Vector.Y)) + "," + FString::FromInt(StaticCast<int>(FMath::Frac(Vector.Y) * 10)) + ")" };
+			return "(" + ToString(Vector.X) + " | " + ToString(Vector.Y) + ")";
 		}
 		
 		/**
@@ -34,9 +54,7 @@ namespace WeekendUtils
 		 */
 		FORCEINLINE FString ToString(const FVector2d& Vector)
 		{
-			return { "(" +
-				FString::FromInt(StaticCast<int>(Vector.X)) + "," + FString::FromInt(StaticCast<int>(FMath::Frac(Vector.X) * 10)) + " | " +
-				FString::FromInt(StaticCast<int>(Vector.Y)) + "," + FString::FromInt(StaticCast<int>(FMath::Frac(Vector.Y) * 10)) + ")" };
+			return "(" + ToString(Vector.X) + " | " + ToString(Vector.Y) + ")";
 		}
 		
 		/**
@@ -46,10 +64,7 @@ namespace WeekendUtils
 		 */
 		FORCEINLINE FString ToString(const FVector& Vector)
 		{
-			return { "(" +
-				FString::FromInt(StaticCast<int>(Vector.X)) + "," + FString::FromInt(StaticCast<int>(FMath::Frac(Vector.X) * 10)) + " | " +
-				FString::FromInt(StaticCast<int>(Vector.Y)) + "," + FString::FromInt(StaticCast<int>(FMath::Frac(Vector.Y) * 10)) + " | " +
-				FString::FromInt(StaticCast<int>(Vector.Z)) + "," + FString::FromInt(StaticCast<int>(FMath::Frac(Vector.Z) * 10)) + ")" };
+			return "(" + ToString(Vector.X) + " | " + ToString(Vector.Y) + " | " + ToString(Vector.Z) + ")";
 		}
 	}
 }
