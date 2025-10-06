@@ -19,7 +19,7 @@
 // AutomationTest.h and are not supposed to be a complete replacement,
 // but rather an augmentation of the latter.
 //
-// All of the macros in this file must contain the initials NW to avoid
+// All of the macros in this file must contain the initials WE to avoid
 // name clashes and make them easily distinguishable!
 //////////////////////////////////////////////////////////////////////////
 
