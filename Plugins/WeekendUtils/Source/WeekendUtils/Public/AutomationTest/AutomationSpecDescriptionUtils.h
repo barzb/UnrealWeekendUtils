@@ -22,9 +22,8 @@ namespace WeekendUtils
 		 */
 		FORCEINLINE FString ToString(const float Float)
 		{
-			return (FMath::Sign(Float) == 1.f ? "" : "-")
-				+ FString::FromInt(StaticCast<int>(FMath::Abs(Float))) + ","
-				+ FString::FromInt(StaticCast<int>(FMath::Frac(Float) * 10));
+			return FString::FromInt(FMath::TruncToInt(Float)) + ","
+				+ FString::FromInt(StaticCast<int>(FMath::Frac(Float) * 100));
 		}
 		
 		/**
@@ -34,7 +33,7 @@ namespace WeekendUtils
 		 */
 		FORCEINLINE FString ToString(const double Double)
 		{
-			return FString::FromInt(StaticCast<int>(Double)) + "," + FString::FromInt(StaticCast<int>(FMath::Frac(Double) * 10));
+			return FString::FromInt(StaticCast<int>(Double)) + "," + FString::FromInt(StaticCast<int>(FMath::Frac(Double) * 100));
 		}
 		
 		/**
