@@ -22,18 +22,21 @@ namespace WeekendUtils
 		 */
 		FORCEINLINE FString ToString(const float Float)
 		{
-			return FString::FromInt(FMath::TruncToInt(Float)) + ","
+			return (FMath::Sign(Float) < 0.0f ? "-" : "")
+				+ FString::FromInt(FMath::Abs(FMath::TruncToInt(Float))) + ","
 				+ FString::FromInt(StaticCast<int>(FMath::Frac(Float) * 100));
 		}
 		
 		/**
 		 * Alternative implementation of ToString for double which doesn't introduce weird sub-categories
 		 * based on '.' characters in the session frontend when used in automation spec Describe parameters.
-		 * e.g. Describe(FString::Printf(TEXT("%s"), *SpecStringUtils::ToString(2.3f)), [this](){ ... });
+		 * e.g. Describe(FString::Printf(TEXT("%s"), *SpecStringUtils::ToString(2.3)), [this](){ ... });
 		 */
 		FORCEINLINE FString ToString(const double Double)
 		{
-			return FString::FromInt(StaticCast<int>(Double)) + "," + FString::FromInt(StaticCast<int>(FMath::Frac(Double) * 100));
+			return (FMath::Sign(Double) < 0.0 ? "-" : "")
+				+ FString::FromInt(FMath::Abs(FMath::TruncToInt(Double))) + ","
+				+ FString::FromInt(StaticCast<int>(FMath::Frac(Double) * 100));
 		}
 		
 		/**
