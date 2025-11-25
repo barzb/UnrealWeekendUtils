@@ -16,16 +16,17 @@ void USaveGameSlotViewModel::BindToModel(const FSlotName& SlotName, USaveGameSer
 	BoundSlotName = SlotName;
 	if (const USaveGame* SaveGame = SaveGameService.GetCachedSaveGameSnapshotAtSlot(SlotName))
 	{
+		UE_MVVM_SET_PROPERTY_VALUE(bIsEmptySlot, false);
 		BindToSaveGame(SlotName, *SaveGame);
 	}
 	else
 	{
+		UE_MVVM_SET_PROPERTY_VALUE(bIsEmptySlot, true);
 		BindToEmptySlot(SlotName);
 	}
 
 	const FSlotName CurrentSlotName = SaveGameService.GetCurrentSaveGame().GetSlotLastRestoredFrom().Get("");
 	UE_MVVM_SET_PROPERTY_VALUE(bIsCurrentSaveGame, (CurrentSlotName == SlotName));
-
 	UE_MVVM_SET_PROPERTY_VALUE(bCanBeSavedFromWidget, bCanSave);
 	UE_MVVM_SET_PROPERTY_VALUE(bCanBeLoadedFromWidget, bCanLoad);
 }

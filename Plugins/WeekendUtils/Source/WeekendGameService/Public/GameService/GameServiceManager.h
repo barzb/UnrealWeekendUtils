@@ -136,6 +136,7 @@ public:
 	TArray<FGameServiceClass> GetAllRegisteredServiceClasses() const;
 	TArray<FGameServiceInstanceClass> GetAllRegisteredServiceInstanceClasses() const;
 	TOptional<FGameServiceInstanceClass> FindRegisteredServiceInstanceClass(const FGameServiceClass& ServiceClass) const;
+	const UGameServiceBase* FindRegisteredServiceTemplateInstance(const FGameServiceClass& ServiceClass, const FGameServiceInstanceClass& InstanceClass) const;
 	TArray<FGameServiceClass> GetAllStartedServiceClasses() const;
 	TArray<UGameServiceBase*> GetAllStartedServiceInstances() const;
 

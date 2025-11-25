@@ -49,16 +49,19 @@ public:
 	/** Called right before the current SaveGame is being saved to file. */
 	virtual void HandleBeforeSaveGameSaved(const FCurrentSaveGame& SaveGame, USaveGameService* SaveGameService);
 
+	/** Called right after the current SaveGame was saved to file. */
+	virtual void HandleAfterSaveGameSaved(const FCurrentSaveGame& SaveGame, USaveGameService* SaveGameService) {}
+
 	/** Called right after the current SaveGame was restored. */
 	virtual void HandleAfterSaveGameRestored(const FCurrentSaveGame& SaveGame, USaveGameService* SaveGameService);
 
 	/** Called after the current level has been changed. */
 	virtual void HandleLevelChanged(USaveGameService& SaveGameService, UWorld* World) {}
 
-	virtual FSlotName GetAutosaveSlotName() const { return "Autosave"; }
+	virtual FSlotName GetAutosaveSlotName(const FCurrentSaveGame& CurrentSaveGame) const { return "Autosave"; }
 
-	virtual TSet<FSlotName> GetSaveSlotNamesAllowedForSaving() const PURE_VIRTUAL(GetSaveSlotNamesAllowedForSaving, return {};);
-	virtual TSet<FSlotName> GetSaveSlotNamesAllowedForLoading() const PURE_VIRTUAL(GetSaveSlotNamesAllowedForLoading, return {};);
+	virtual TSet<FSlotName> GetSaveSlotNamesAllowedForSaving(const FCurrentSaveGame& CurrentSaveGame) const PURE_VIRTUAL(GetSaveSlotNamesAllowedForSaving, return {};);
+	virtual TSet<FSlotName> GetSaveSlotNamesAllowedForLoading(const FCurrentSaveGame& CurrentSaveGame) const PURE_VIRTUAL(GetSaveSlotNamesAllowedForLoading, return {};);
 
 	/** Factory method called by @USaveGameService to create new SaveGame objects. Default = @UModularSaveGame. */
 	virtual USaveGame& CreateNewSavegameObject(USaveGameService& SaveGameService) const;
@@ -74,6 +77,10 @@ public:
 
 	/** Attempts to travel into the level (hopefully) saved in given SaveGame. @returns whether this was successful. */
 	virtual bool TryTravelToSavedLevel(const FCurrentSaveGame& SaveGame);
+
+protected:
+	/** Possibility for derived behaviors to make an options-string that is passed in TryTravelToSavedLevel(). */
+	virtual FString MakeTravelOptions(const FCurrentSaveGame& SaveGame) const { return FString(); }
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -93,8 +100,8 @@ public:
 
 	// - USaveGameBehavior
 	virtual void HandleGameStart(USaveGameService& SaveGameService) override;
-	virtual TSet<FSlotName> GetSaveSlotNamesAllowedForSaving() const override;
-	virtual TSet<FSlotName> GetSaveSlotNamesAllowedForLoading() const override;
+	virtual TSet<FSlotName> GetSaveSlotNamesAllowedForSaving(const FCurrentSaveGame& CurrentSaveGame) const override;
+	virtual TSet<FSlotName> GetSaveSlotNamesAllowedForLoading(const FCurrentSaveGame& CurrentSaveGame) const override;
 	// --
 
 protected:
@@ -120,9 +127,9 @@ class WEEKENDSAVEGAME_API UDefaultPlayInEditorSaveLoadBehavior : public USaveLoa
 public:
 	// - USaveGameBehavior
 	virtual void HandleGameStart(USaveGameService& SaveGameService) override;
-	virtual TSet<FSlotName> GetSaveSlotNamesAllowedForSaving() const override;
-	virtual TSet<FSlotName> GetSaveSlotNamesAllowedForLoading() const override;
-	virtual FSlotName GetAutosaveSlotName() const override;
+	virtual TSet<FSlotName> GetSaveSlotNamesAllowedForSaving(const FCurrentSaveGame& CurrentSaveGame) const override;
+	virtual TSet<FSlotName> GetSaveSlotNamesAllowedForLoading(const FCurrentSaveGame& CurrentSaveGame) const override;
+	virtual FSlotName GetAutosaveSlotName(const FCurrentSaveGame& CurrentSaveGame) const override;
 	// - UObject
 	virtual bool IsEditorOnly() const override { return true; }
 	// --

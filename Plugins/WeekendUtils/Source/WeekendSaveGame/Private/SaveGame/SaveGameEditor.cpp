@@ -161,6 +161,7 @@ void USaveGameEditor::OpenSaveGameEditor(const USaveGame*) { unimplemented(); }
 void USaveGameEditor::OpenSaveGameEditorForCurrentSaveGame() { unimplemented(); }
 void USaveGameEditor::ConvertToPreset() { unimplemented(); }
 void USaveGameEditor::EditCurrentSaveGame() { unimplemented(); }
-void USaveGameEditor::LoadSaveGameFromFile() { unimplemented(); }
+void USaveGameEditor::EditSaveGameFromFile() { unimplemented(); }
+void USaveGameEditor::SetSaveGame(const USaveGame* InSaveGame, TOptional<FString> OptionalInfo) { unimplemented(); }
 
 #endif

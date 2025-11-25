@@ -12,6 +12,7 @@
 #include "CoreMinimal.h"
 #include "MVVMViewModelBase.h"
 #include "Components/SlateWrapperTypes.h"
+#include "Containers/Ticker.h"
 #include "GameService/GameServiceUser.h"
 #include "SaveGame/SaveGameService.h"
 
@@ -42,29 +43,26 @@ public:
 	UPROPERTY(FieldNotify, BlueprintReadOnly, Category = "Weekend Utils|Save Game")
 	bool bIsSaving = false;
 
-	/** Timestamp (UTC) of the last time the game was saved. */
-	UPROPERTY(FieldNotify, BlueprintReadOnly, Category = "Weekend Utils|Save Game")
-	FDateTime UtcTimeOfLastSave = FDateTime();
-
-	/** @returns how long ago the current savegame was saved. */
-	UFUNCTION(FieldNotify, BlueprintPure, Category = "Weekend Utils|Save Game")
-	FTimespan GetTimeSinceLastSave() const;
-
-	UFUNCTION(FieldNotify, BlueprintPure, Category = "Weekend Utils|Save Game")
-	bool ShouldShowTimeSinceLastSave() const;
-
 	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game")
 	virtual void BeginUsage();
 
 	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game")
 	virtual void EndUsage();
 
+	/** (Optional) Should be called before @BeginUsage() to configure how long the marker should be shown at minimum, even if save/load is faster. */
+	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game")
+	void ConfigureMinimumShowtime(float MinShowtimeSeconds = 2.f);
+
 protected:
 	TWeakObjectPtr<USaveGameService> SaveGameService = nullptr;
+	TOptional<float> ConfiguredMinShowtimeSeconds = {};
+	TOptional<FTSTicker::FDelegateHandle> MinShowtimeHandle = {};
+	bool bIsShowingForMinShowtime = false;
 
 	// - UObject
 	virtual void BeginDestroy() override;
 	// --
 
 	virtual void UpdateForStatus(USaveGameService::EStatus NewStatus);
+	virtual void StartMinShowTimer();
 };

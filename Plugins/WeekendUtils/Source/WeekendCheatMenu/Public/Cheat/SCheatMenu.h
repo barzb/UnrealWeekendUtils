@@ -26,6 +26,7 @@ public:
 	SLATE_BEGIN_ARGS(SCheatMenu) {}
 		SLATE_ARGUMENT_DEFAULT(uint16, NumRecentlyUsedCheatsToShow) = 16;
 		SLATE_EVENT(FOnCheatExecuted, OnCheatExecuted)
+		SLATE_EVENT(FSimpleDelegate, OnCloseRequested)
 	SLATE_END_ARGS()
 
 	// - SCompoundWidget
@@ -69,6 +70,7 @@ protected:
 	TSharedPtr<STextBlock> ErrorText = nullptr;
 
 	FOnCheatExecuted OnCheatExecuted;
+	FSimpleDelegate OnCloseRequested;
 
 	void CollectCheats();
 	void PopulateTabList();

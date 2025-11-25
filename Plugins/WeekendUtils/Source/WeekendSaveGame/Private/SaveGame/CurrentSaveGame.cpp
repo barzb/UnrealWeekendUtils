@@ -23,6 +23,7 @@ FCurrentSaveGame FCurrentSaveGame::CreateFromLoadedGame(USaveGame& SaveGame, TOp
 	CurrentSaveGame.SaveGameObject = &SaveGame;
 	CurrentSaveGame.bWasEverLoaded = true;
 	CurrentSaveGame.SlotLastRestoredFrom = LoadedFromSlotName;
+	CurrentSaveGame.SlotLastSavedTo = LoadedFromSlotName;
 	return CurrentSaveGame;
 }
 

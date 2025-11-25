@@ -86,6 +86,9 @@ public:
 	/** Event fired right before the current SaveGame is saved. Last chance to push data into the SaveGame. */
 	FCurrentSaveGame::FOnBeforeSaved OnBeforeSaved;
 
+	/** Event fired right after the current SaveGame was saved. */
+	FCurrentSaveGame::FOnAfterSaved OnAfterSaved;
+
 	/** Event fired right after the current SaveGame was restored. */
 	FCurrentSaveGame::FOnAfterRestored OnAfterRestored;
 
@@ -178,6 +181,7 @@ public:
 	///////////////////////////////////////////////////////////////////////////////////////
 	/// INFORMATION
 
+	friend WEEKENDSAVEGAME_API FString LexToString(const EStatus& Status);
 	FORCEINLINE const FCurrentSaveGame& GetCurrentSaveGame() const { return CurrentSaveGame; }
 	FORCEINLINE virtual uint32 GetCurrentUserIndex() const { return 0; }
 	FORCEINLINE EStatus GetCurrentStatus() const { return CurrentStatus; }
@@ -203,6 +207,7 @@ public:
 	const USaveGame* GetCachedSaveGameSnapshotAtSlot(const FSlotName& SlotName) const;
 	TMap<FSlotName, const USaveGame*> GetAllCachedSaveGameSnapshots() const;
 	bool IsCachedSaveGameSnapshot(const USaveGame& SaveGameObject) const;
+	bool HasAnyCachedSaveGameSnapshot() const;
 
 protected:
 	///////////////////////////////////////////////////////////////////////////////////////
@@ -296,6 +301,7 @@ protected:
 		explicit FSaveCurrentSaveGameRequest(USaveGameService& InService, const FDebugContext& InContext) : ISaveLoadRequest(InService, InContext) {}
 		explicit FSaveCurrentSaveGameRequest(USaveGameService& InService, const FDebugContext& InContext, const FOnSaveLoadCompleted& Callback) :
 			ISaveLoadRequest(InService, InContext, Callback) {}
+		virtual void Finish(USaveGame* RequestedSaveGame, bool bSuccess) override;
 	};
 
 	TMap<FSlotName, TArray<TSharedRef<ISaveLoadRequest>>> PendingSaveRequestsBySlot = {};
@@ -310,13 +316,15 @@ protected:
 	struct FSaveLoadLock
 	{
 		TWeakObjectPtr<const UObject> KeyHolder = nullptr;
-		FString ContextString = FString();
+		FDebugContext ContextString = FString();
 	};
 
 	TMap<FSaveLoadLockHandle, FSaveLoadLock> ActiveAutosaveLocks = {};
 	TMap<FSaveLoadLockHandle, FSaveLoadLock> ActiveSaveLocks = {};
 	TMap<FSaveLoadLockHandle, FSaveLoadLock> ActiveLoadLocks = {};
 	TOptional<FSaveLoadLockHandle> CurrentLevelSaveLock = {};
+	TOptional<FSaveLoadLockHandle> WorldTransitionSaveLockHandle = {};
+	TOptional<FSaveLoadLockHandle> WorldTransitionLoadLockHandle = {};
 
 	///////////////////////////////////////////////////////////////////////////////////////
 	/// OVERRIDES
@@ -329,10 +337,10 @@ protected:
 	///////////////////////////////////////////////////////////////////////////////////////
 	/// REQUESTS
 
-	FAsyncSaveGameHandle EnqueueSaveRequest(const FSlotName& SlotName, const TSharedRef<ISaveLoadRequest>& Request);
+	FAsyncSaveGameHandle EnqueueSaveRequest(const FSlotName& SlotName, const TSharedRef<ISaveLoadRequest>& Request, bool bCancelIfSavingIsNotAllowed = true);
 	void ConsumeSaveRequestsInProgress(USaveGame* SavedSaveGame, bool bSuccess);
 
-	FAsyncLoadGameHandle EnqueueLoadRequest(const FSlotName& SlotName, const TSharedRef<ISaveLoadRequest>& Request);
+	FAsyncLoadGameHandle EnqueueLoadRequest(const FSlotName& SlotName, const TSharedRef<ISaveLoadRequest>& Request, bool bCancelIfLoadingIsNotAllowed = true);
 	void ConsumeLoadRequestsInProgress(USaveGame* LoadedSaveGame, bool bSuccess);
 
 	///////////////////////////////////////////////////////////////////////////////////////
@@ -356,6 +364,7 @@ protected:
 
 	virtual void HandleLevelChanged(UWorld* NewWorld);
 	virtual void UpdateSaveLockForLevel(UWorld* NewWorld);
+	virtual void CreateWorldTransitionSaveLoadLocks();
 
 	virtual void SetStatus(const EStatus& NewStatus);
 	virtual void AddDebugEntry(const FString& Entry);

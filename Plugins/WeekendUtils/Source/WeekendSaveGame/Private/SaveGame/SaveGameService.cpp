@@ -1,4 +1,4 @@
-﻿///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
 /// Copyright (C) by Benjamin Barz and contributors. See file: CREDITS.md
 ///
 /// This file is part of the WeekendUtils UE5 Plugin.
@@ -18,25 +18,13 @@
 
 DEFINE_LOG_CATEGORY(LogSaveGameService);
 
-namespace
-{
-	FString LexToString(const USaveGameService::EStatus& Status)
-	{
-		switch (Status)
-		{
-			case USaveGameService::EStatus::Uninitialized: return "Uninitialized";
-			case USaveGameService::EStatus::Saving: return "Saving";
-			case USaveGameService::EStatus::Loading: return "Loading";
-			case USaveGameService::EStatus::Idle: return "Idle";
-			default: return "???";
-		}
-	}
-}
-
 FAsyncSaveGameHandle USaveGameService::RequestAutosave(const FDebugContext& Context)
 {
 	if (!IsAutosavingAllowed())
+	{
+		UE_LOG(LogSaveGameService, Log, TEXT("Autosave request ignored, because autosaving is not allowed. (Context: %s)"), *Context);
 		return FAsyncSaveGameHandle();
+	}
 
 	return RequestSaveCurrentSaveGameToSlot(Context, GetAutosaveSlotName());
 }
@@ -44,7 +32,10 @@ FAsyncSaveGameHandle USaveGameService::RequestAutosave(const FDebugContext& Cont
 FAsyncSaveGameHandle USaveGameService::RequestAutosave(const FDebugContext& Context, const FOnSaveLoadCompleted& Callback)
 {
 	if (!IsAutosavingAllowed())
+	{
+		UE_LOG(LogSaveGameService, Log, TEXT("Autosave request ignored, because autosaving is not allowed. (Context: %s)"), *Context);
 		return FAsyncSaveGameHandle();
+	}
 
 	return RequestSaveCurrentSaveGameToSlot(Context, GetAutosaveSlotName(), Callback);
 }
@@ -293,7 +284,8 @@ void USaveGameService::PreloadSaveGamesAsync(const TSet<FSlotName>& SlotNames, c
 
 	for (auto SlotAndRequest = Requests.CreateIterator(); SlotAndRequest; ++SlotAndRequest)
 	{
-		EnqueueLoadRequest(SlotAndRequest.Key(), SlotAndRequest.Value());
+		static constexpr bool bCancelIfLoadingIsNotAllowed = false; // Always preload, even if something disabled loading.
+		EnqueueLoadRequest(SlotAndRequest.Key(), SlotAndRequest.Value(), bCancelIfLoadingIsNotAllowed);
 	}
 }
 
@@ -406,6 +398,7 @@ FSaveLoadLockHandle USaveGameService::LockAutosaving(const UObject& KeyHolder, c
 	const FSaveLoadLockHandle NewKey = FSaveLoadLockHandle::NewGuid();
 	FSaveLoadLock& NewLock = ActiveAutosaveLocks.Add(NewKey);
 	NewLock.KeyHolder = MakeWeakObjectPtr(&KeyHolder);
+	NewLock.ContextString = Context;
 	AddDebugEntry("LockAutosaving", FString::Printf(TEXT("KeyHolder: %s, Context: %s, Key: %s"), *KeyHolder.GetName(), *Context, *NewKey.ToString()));
 	return NewKey;
 }
@@ -425,6 +418,7 @@ FSaveLoadLockHandle USaveGameService::LockSaving(const UObject& KeyHolder, const
 	const FSaveLoadLockHandle NewKey = FSaveLoadLockHandle::NewGuid();
 	FSaveLoadLock& NewLock = ActiveSaveLocks.Add(NewKey);
 	NewLock.KeyHolder = MakeWeakObjectPtr(&KeyHolder);
+	NewLock.ContextString = Context;
 	AddDebugEntry("LockSaving", FString::Printf(TEXT("KeyHolder: %s, Context: %s, Key: %s"), *KeyHolder.GetName(), *Context, *NewKey.ToString()));
 	return NewKey;
 }
@@ -444,6 +438,7 @@ FSaveLoadLockHandle USaveGameService::LockLoading(const UObject& KeyHolder, cons
 	const FSaveLoadLockHandle NewKey = FSaveLoadLockHandle::NewGuid();
 	FSaveLoadLock& NewLock = ActiveLoadLocks.Add(NewKey);
 	NewLock.KeyHolder = MakeWeakObjectPtr(&KeyHolder);
+	NewLock.ContextString = Context;
 	AddDebugEntry("LockLoading", FString::Printf(TEXT("KeyHolder: %s, Context: %s, Key: %s"), *KeyHolder.GetName(), *Context, *NewKey.ToString()));
 	return NewKey;
 }
@@ -505,6 +500,16 @@ USaveLoadBehavior& USaveGameService::CreateSaveLoadBehavior(const USaveGameServi
 	BehaviorClass = (!GetWorld() || GetWorld()->WorldType == EWorldType::PIE)
 		? Settings.PlayInEditorSaveLoadBehavior
 		: Settings.PlayInStandaloneSaveLoadBehavior;
+	{
+		bool bHasOverrideBehaviorClass = false;
+		FSoftClassPath OverrideBehaviorClass = nullptr;
+		USaveGameUtils::GetOverrideSaveLoadBehavior(OUT bHasOverrideBehaviorClass, OUT OverrideBehaviorClass);
+		if (bHasOverrideBehaviorClass && !OverrideBehaviorClass.IsNull())
+		{
+			UE_LOG(LogSaveGameService, Log, TEXT("Using override SaveLoadBehavior: %s"), *OverrideBehaviorClass.ToString());
+			BehaviorClass = OverrideBehaviorClass;
+		}
+	}
 #endif
 
 #if WITH_AUTOMATION_TESTS
@@ -519,6 +524,7 @@ USaveLoadBehavior& USaveGameService::CreateSaveLoadBehavior(const USaveGameServi
 
 	UE_LOG(LogSaveGameService, Log, TEXT("%s created %s"), *GetName(), *Behavior->GetName());
 	OnBeforeSaved.AddUObject(Behavior, &USaveLoadBehavior::HandleBeforeSaveGameSaved, this);
+	OnAfterSaved.AddUObject(Behavior, &USaveLoadBehavior::HandleAfterSaveGameSaved, this);
 	OnAfterRestored.AddUObject(Behavior, &USaveLoadBehavior::HandleAfterSaveGameRestored, this);
 	Behavior->Initialize(*this);
 
@@ -551,6 +557,9 @@ void USaveGameService::StartService()
 
 	SetStatus(EStatus::Idle);
 
+	// Lock save/load while transitioning between levels, to avoid unexpected behavior:
+	CreateWorldTransitionSaveLoadLocks();
+
 	SaveLoadBehavior->HandleGameStart(*this);
 
 	// Need something to save to -> create a new SG object:
@@ -573,6 +582,7 @@ void USaveGameService::ShutdownService()
 	if (SaveLoadBehavior)
 	{
 		OnBeforeSaved.RemoveAll(SaveLoadBehavior);
+		OnAfterSaved.RemoveAll(SaveLoadBehavior);
 		OnAfterRestored.RemoveAll(SaveLoadBehavior);
 		SaveLoadBehavior->HandleGameExit(*this);
 		SaveLoadBehavior = nullptr;
@@ -587,10 +597,11 @@ void USaveGameService::ShutdownService()
 	FWorldDelegates::OnPostWorldInitialization.RemoveAll(this);
 }
 
-FAsyncSaveGameHandle USaveGameService::EnqueueSaveRequest(const FSlotName& SlotName, const TSharedRef<ISaveLoadRequest>& Request)
+FAsyncSaveGameHandle USaveGameService::EnqueueSaveRequest(const FSlotName& SlotName, const TSharedRef<ISaveLoadRequest>& Request, bool bCancelIfSavingIsNotAllowed)
 {
-	if (!IsSavingAllowed())
+	if (!IsSavingAllowed() && bCancelIfSavingIsNotAllowed)
 	{
+		UE_LOG(LogSaveGameService, Log, TEXT("Save request ignored, because saving is not allowed."));
 		Request->Finish(nullptr, false);
 		return FAsyncSaveGameHandle();
 	}
@@ -610,9 +621,9 @@ void USaveGameService::ConsumeSaveRequestsInProgress(USaveGame* SavedSaveGame, b
 	SaveRequestsInProgress.Empty();
 }
 
-FAsyncLoadGameHandle USaveGameService::EnqueueLoadRequest(const FSlotName& SlotName, const TSharedRef<ISaveLoadRequest>& Request)
+FAsyncLoadGameHandle USaveGameService::EnqueueLoadRequest(const FSlotName& SlotName, const TSharedRef<ISaveLoadRequest>& Request, bool bCancelIfLoadingIsNotAllowed)
 {
-	if (!IsLoadingAllowed())
+	if (!IsLoadingAllowed() && bCancelIfLoadingIsNotAllowed)
 	{
 		Request->Finish(nullptr, false);
 		return FAsyncLoadGameHandle();
@@ -644,7 +655,7 @@ void USaveGameService::ConsumeLoadRequestsInProgress(USaveGame* LoadedSaveGame, 
 USaveGameService::FSlotName USaveGameService::GetAutosaveSlotName() const
 {
 	ensure(SaveLoadBehavior);
-	return (SaveLoadBehavior ? SaveLoadBehavior->GetAutosaveSlotName() : FSlotName());
+	return (SaveLoadBehavior ? SaveLoadBehavior->GetAutosaveSlotName(GetCurrentSaveGame()) : FSlotName());
 }
 
 TOptional<USaveGameService::FSlotName> USaveGameService::GetMostRecentlySavedSlotName() const
@@ -667,6 +678,11 @@ bool USaveGameService::IsCachedSaveGameSnapshot(const USaveGame& SaveGameObject)
 	return CachedSaveGames.GetAllObjectsBySlot().FindKey(&SaveGameObject) != nullptr;
 }
 
+bool USaveGameService::HasAnyCachedSaveGameSnapshot() const
+{
+	return GetAllCachedSaveGameSnapshots().Num() > 0;
+}
+
 bool USaveGameService::DoesSaveFileExist(const FSlotName& SlotName) const
 {
 	return (SaveGameSerializer && SaveGameSerializer->DoesSaveGameExist(SlotName, GetCurrentUserIndex()));
@@ -674,10 +690,7 @@ bool USaveGameService::DoesSaveFileExist(const FSlotName& SlotName) const
 
 TSet<USaveGameService::FSlotName> USaveGameService::GetSlotNamesAllowedForSaving() const
 {
-	if (!IsSavingAllowed())
-		return {};
-
-	return SaveLoadBehavior->GetSaveSlotNamesAllowedForSaving();
+	return SaveLoadBehavior->GetSaveSlotNamesAllowedForSaving(GetCurrentSaveGame());
 }
 
 TSet<USaveGameService::FSlotName> USaveGameService::GetSlotNamesAllowedForLoading() const
@@ -686,9 +699,10 @@ TSet<USaveGameService::FSlotName> USaveGameService::GetSlotNamesAllowedForLoadin
 		return {};
 
 	TSet<FSlotName> Result = {};
-	for (const FSlotName& SlotName : SaveLoadBehavior->GetSaveSlotNamesAllowedForLoading())
+	for (const FSlotName& SlotName : SaveLoadBehavior->GetSaveSlotNamesAllowedForLoading(GetCurrentSaveGame()))
 	{
-		if (DoesSaveFileExist(SlotName))
+		// Check if file exists and if the preloaded savegame is loadable:
+		if (DoesSaveFileExist(SlotName) && CachedSaveGames.Contains(SlotName))
 		{
 			Result.Add(SlotName);
 		}
@@ -725,8 +739,10 @@ void USaveGameService::HandleAsyncSaveCompleted(const FSlotName& SlotName, const
 	OnAvailableSaveGamesChanged.Broadcast();
 
 	ConsumeSaveRequestsInProgress(CurrentSaveGame.GetMutablePtr(), bSuccess);
-
 	SetStatus(EStatus::Idle);
+
+	OnAfterSaved.Broadcast(CurrentSaveGame);
+
 	ProcessPendingRequests();
 }
 
@@ -759,7 +775,8 @@ USaveGame* USaveGameService::PerformSyncLoad(const FSlotName& SlotName)
 
 void USaveGameService::HandleAsyncLoadCompleted(const FSlotName& SlotName, const int32 UserIndex, USaveGame* LoadedSaveGame)
 {
-	if (LoadedSaveGame && !CachedSaveGames.Contains(SlotName))
+	UE_CLOG(!IsValid(LoadedSaveGame), LogSaveGameService, Log, TEXT("AsyncLoad of SaveGame in slot %s failed."), *SlotName);
+	if (IsValid(LoadedSaveGame) && !CachedSaveGames.Contains(SlotName))
 	{
 		CachedSaveGames.CopyToCache(*this, SlotName, *LoadedSaveGame);
 		OnAvailableSaveGamesChanged.Broadcast();
@@ -773,6 +790,10 @@ void USaveGameService::HandleAsyncLoadCompleted(const FSlotName& SlotName, const
 
 void USaveGameService::HandleLevelChanged(UWorld* NewWorld)
 {
+	// don't update save locks for e.g. editor preview worlds such as the thumbnail renderer worlds
+	if (NewWorld->WorldType != EWorldType::Game && NewWorld->WorldType != EWorldType::PIE)
+		return;
+	
 	UpdateSaveLockForLevel(NewWorld);
 
 	SaveLoadBehavior->HandleLevelChanged(*this, NewWorld);
@@ -792,7 +813,66 @@ void USaveGameService::UpdateSaveLockForLevel(UWorld* NewWorld)
 	}
 	else
 	{
-		CurrentLevelSaveLock = LockSaving(*NewWorld);
+		CurrentLevelSaveLock = LockSaving(*NewWorld, "UpdateSaveLockForLevel: " + NewWorld->GetName());
+	}
+}
+
+void USaveGameService::CreateWorldTransitionSaveLoadLocks()
+{
+	UWorld* World = GetWorld();
+
+	// Callback to unlock save/load again:
+	auto UnlockSaveLoadLocks = [this](UWorld* World)
+	{
+		if (!IsValid(this))
+			return;
+
+		if (WorldTransitionSaveLockHandle.IsSet())
+		{
+			UnlockSaving(*WorldTransitionSaveLockHandle, "USaveGameService - World Transition (done)");
+		}
+		if (WorldTransitionLoadLockHandle.IsSet())
+		{
+			UnlockLoading(*WorldTransitionLoadLockHandle, "USaveGameService - World Transition (done)");
+		}
+
+		World->OnWorldBeginPlay.RemoveAll(this);
+	};
+
+	// Lock save/load when leaving a world:
+	FWorldDelegates::OnWorldBeginTearDown.AddWeakLambda(this,
+		[this](UWorld* World)
+		{
+			World->OnWorldBeginPlay.RemoveAll(this);
+			WorldTransitionSaveLockHandle = LockSaving(*this, "USaveGameService - World Transition (teardown)");
+			WorldTransitionLoadLockHandle = LockLoading(*this, "USaveGameService - World Transition (teardown)");
+		});
+
+	// Unlock save/load when a new world has begun play:
+	FWorldDelegates::OnPostWorldInitialization.AddWeakLambda(this,
+		[this, UnlockSaveLoadLocks](UWorld* World, const UWorld::InitializationValues)
+		{
+			if (World->HasBegunPlay())
+			{
+				UnlockSaveLoadLocks(World);
+			}
+			else
+			{
+				World->OnWorldBeginPlay.AddWeakLambda(this, UnlockSaveLoadLocks, World);
+			}
+		});
+
+	// Lock initially, if existing world has not yet begun play:
+	if (!World || !World->HasBegunPlay())
+	{
+		WorldTransitionSaveLockHandle = LockSaving(*this, "USaveGameService - World Transition (init)");
+		WorldTransitionLoadLockHandle = LockLoading(*this, "USaveGameService - World Transition (init)");
+	}
+
+	// Unlock when existing world has begun play:
+	if (World && World->IsInitialized() && !World->HasBegunPlay())
+	{
+		World->OnWorldBeginPlay.AddWeakLambda(this, UnlockSaveLoadLocks, World);
 	}
 }
 
@@ -909,4 +989,25 @@ void USaveGameService::FLoadAndTravelIntoToCurrentSaveGameRequest::Finish(USaveG
 	Runtime = FPlatformTime::Seconds() - StartTime;
 	Service.AddDebugEntry("LoadAndTravelIntoToCurrentSaveGameRequest", Context, bSuccess, Runtime);
 	ISaveLoadRequest::Finish(RequestedSaveGame, bSuccess);
+}
+
+void USaveGameService::FSaveCurrentSaveGameRequest::Finish(USaveGame* RequestedSaveGame, bool bSuccess)
+{
+	Runtime = FPlatformTime::Seconds() - StartTime;
+	Service.AddDebugEntry("SaveCurrentSaveGameRequest", Context, bSuccess, Runtime);
+	ISaveLoadRequest::Finish(RequestedSaveGame, bSuccess);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////
+
+FString LexToString(const USaveGameService::EStatus& Status)
+{
+	switch (Status)
+	{
+	case USaveGameService::EStatus::Uninitialized: return "Uninitialized";
+	case USaveGameService::EStatus::Saving: return "Saving";
+	case USaveGameService::EStatus::Loading: return "Loading";
+	case USaveGameService::EStatus::Idle: return "Idle";
+	default: return "???";
+	}
 }

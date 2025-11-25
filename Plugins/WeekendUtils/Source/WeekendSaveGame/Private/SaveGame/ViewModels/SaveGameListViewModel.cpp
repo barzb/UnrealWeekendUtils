@@ -9,6 +9,7 @@
 
 #include "SaveGame/ViewModels/SaveGameListViewModel.h"
 
+#include "Algo/Find.h"
 #include "SaveGame/SaveGamePreset.h"
 #include "SaveGame/SaveGameService.h"
 #include "SaveGame/ViewModels/SaveGameSlotViewModel.h"
@@ -79,6 +80,13 @@ void USaveGameListViewModel::BeginDestroy()
 
 ///////////////////////////////////////////////////////////////////////////////////////
 
+void USaveGameSaveListViewModel::BeginUsage(TSubclassOf<USaveGameSlotViewModel> SlotClass)
+{
+	Super::BeginUsage(SlotClass);
+
+	UE_MVVM_SET_PROPERTY_VALUE(bIsSavingAllowed, SaveGameService->IsSavingAllowed());
+}
+
 TArray<USaveGameListViewModel::FSlotName> USaveGameSaveListViewModel::GatherRelevantSlotNames()
 {
 	if (!SaveGameService.IsValid())
@@ -97,6 +105,13 @@ bool USaveGameSaveListViewModel::HandleSaveRequestBySlot(const FSlotName& SlotNa
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
+
+void USaveGameLoadListViewModel::BeginUsage(TSubclassOf<USaveGameSlotViewModel> SlotClass)
+{
+	Super::BeginUsage(SlotClass);
+
+	UE_MVVM_SET_PROPERTY_VALUE(bIsLoadingAllowed, SaveGameService->IsLoadingAllowed());
+}
 
 TArray<USaveGameListViewModel::FSlotName> USaveGameLoadListViewModel::GatherRelevantSlotNames()
 {

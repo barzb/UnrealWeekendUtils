@@ -42,10 +42,15 @@ public:
 	UPROPERTY(FieldNotify, BlueprintReadOnly, Category = "Weekend Utils|Save Game")
 	bool bIsCurrentSaveGame = false;
 
+	UPROPERTY(FieldNotify, BlueprintReadOnly, Category = "Weekend Utils|Save Game")
+	bool bIsEmptySlot = false;
+
 	virtual void BindToModel(const FSlotName& SlotName, USaveGameService& SaveGameService, bool bCanSave, bool bCanLoad);
 	virtual void BindToSaveGame(const FSlotName& SlotName, const USaveGame& SaveGame) PURE_VIRTUAL(BindToSaveGame);
 	virtual void BindToEmptySlot(const FSlotName& SlotName) PURE_VIRTUAL(BindToEmptySlot);
 	virtual void UnbindFromModel() PURE_VIRTUAL(UnbindFromModel);
+
+	FSlotName GetBoundSlotName() const { return BoundSlotName; }
 
 protected:
 	FSlotName BoundSlotName = FSlotName();

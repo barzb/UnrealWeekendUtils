@@ -9,7 +9,6 @@
 
 #include "SaveGame/SaveGameUtils.h"
 
-#include "Editor.h"
 #include "Engine/World.h"
 #include "GameFramework/GameModeBase.h"
 #include "GameFramework/WorldSettings.h"
@@ -21,6 +20,7 @@
 #include "SaveGame/Settings/SaveGameServiceSettings.h"
 
 #if WITH_EDITOR
+#include "Editor.h"
 #include "ISettingsModule.h"
 #endif
 
@@ -35,6 +35,8 @@ namespace
 	const TCHAR*  PIE_SETTINGS_INI_SECTION = TEXT("WeekendUtils.SaveGameUtils");
 	const TCHAR*  PIE_SETTING_OVERRIDE_SLOT_NAME = TEXT("OverridePlayInEditorSaveGameSlotName");
 	const TCHAR*  PIE_SETTING_SHOULD_OVERRIDE_SLOT = TEXT("ShouldOverridePlayInEditorSaveGameSlot");
+	const TCHAR*  PIE_SETTING_OVERRIDE_SAVELOADBEHAVIOR = TEXT("OverrideSaveLoadBehavior");
+	const TCHAR*  PIE_SETTING_SHOULD_OVERRIDE_SAVELOADBEHAVIOR = TEXT("ShouldOverrideSaveLoadBehavior");
 #endif
 
 	FSoftObjectPath GetLevel(UWorld* World)
@@ -83,6 +85,32 @@ void USaveGameUtils::SetOverridePlayInEditorSaveGameSlot(bool bOverride, FString
 #if WITH_EDITOR
 	GConfig->SetBool(PIE_SETTINGS_INI_SECTION, PIE_SETTING_SHOULD_OVERRIDE_SLOT, bOverride, PIE_SETTINGS_INI_FILE);
 	GConfig->SetString(PIE_SETTINGS_INI_SECTION, PIE_SETTING_OVERRIDE_SLOT_NAME, *SlotName, PIE_SETTINGS_INI_FILE);
+	GConfig->Flush(false, PIE_SETTINGS_INI_FILE);
+#else
+	unimplemented();
+#endif
+}
+
+void USaveGameUtils::GetOverrideSaveLoadBehavior(bool& bOutIsOverridden, FSoftClassPath& OutBehaviorClass)
+{
+#if WITH_EDITOR
+	const FString SectionName = StaticClass()->GetName();
+	bool bSuccess = true;
+	FString BehaviorClassString;
+	bSuccess &= GConfig->GetBool(PIE_SETTINGS_INI_SECTION, PIE_SETTING_SHOULD_OVERRIDE_SAVELOADBEHAVIOR, OUT bOutIsOverridden, PIE_SETTINGS_INI_FILE);
+	bSuccess &= GConfig->GetString(PIE_SETTINGS_INI_SECTION, PIE_SETTING_OVERRIDE_SAVELOADBEHAVIOR, OUT BehaviorClassString, PIE_SETTINGS_INI_FILE);
+	OutBehaviorClass = FSoftClassPath(BehaviorClassString);
+	bOutIsOverridden &= bSuccess && !OutBehaviorClass.IsNull();
+#else
+	unimplemented();
+#endif
+}
+
+void USaveGameUtils::SetOverrideSaveLoadBehavior(bool bOverride, FSoftClassPath SetOverrideSaveLoadBehavior)
+{
+#if WITH_EDITOR
+	GConfig->SetBool(PIE_SETTINGS_INI_SECTION, PIE_SETTING_SHOULD_OVERRIDE_SAVELOADBEHAVIOR, bOverride, PIE_SETTINGS_INI_FILE);
+	GConfig->SetString(PIE_SETTINGS_INI_SECTION, PIE_SETTING_OVERRIDE_SAVELOADBEHAVIOR, *SetOverrideSaveLoadBehavior.ToString(), PIE_SETTINGS_INI_FILE);
 	GConfig->Flush(false, PIE_SETTINGS_INI_FILE);
 #else
 	unimplemented();
@@ -154,4 +182,11 @@ bool USaveGameUtils::IsSavingAllowedForWorld(UWorld* World)
 	}
 
 	return false;
+}
+
+TArray<FSoftClassPath> USaveGameUtils::GetAllAvailableSaveLoadBehaviorClasses()
+{
+	TArray<UClass*> ChildClasses;
+	GetDerivedClasses(USaveLoadBehavior::StaticClass(), OUT ChildClasses);
+	return TArray<FSoftClassPath>{ChildClasses};
 }
