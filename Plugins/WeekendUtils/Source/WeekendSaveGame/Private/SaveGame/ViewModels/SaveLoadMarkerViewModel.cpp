@@ -9,22 +9,12 @@
 
 #include "SaveGame/ViewModels/SaveLoadMarkerViewModel.h"
 
+#include "Containers/Ticker.h"
 #include "SaveGame/SaveGameService.h"
 
 USaveLoadMarkerViewModel::USaveLoadMarkerViewModel()
 {
 	ServiceDependencies.Add<USaveGameService>();
-}
-
-FTimespan USaveLoadMarkerViewModel::GetTimeSinceLastSave() const
-{
-	return (FDateTime::UtcNow() - UtcTimeOfLastSave);
-}
-
-bool USaveLoadMarkerViewModel::ShouldShowTimeSinceLastSave() const
-{
-	return SaveGameService.IsValid()
-		&& SaveGameService->GetCurrentSaveGame().GetUtcTimeOfLastSave().IsSet();
 }
 
 void USaveLoadMarkerViewModel::BeginUsage()
@@ -42,11 +32,22 @@ void USaveLoadMarkerViewModel::EndUsage()
 		SaveGameService.Reset();
 	}
 
+	bIsShowingForMinShowtime = false;
+	if (MinShowtimeHandle.IsSet())
+	{
+		FTSTicker::GetCoreTicker().RemoveTicker(*MinShowtimeHandle);
+		MinShowtimeHandle.Reset();
+	}
+
 	UE_MVVM_SET_PROPERTY_VALUE(bIsLoading, false);
 	UE_MVVM_SET_PROPERTY_VALUE(bIsSaving, false);
 	UE_MVVM_SET_PROPERTY_VALUE(bIsSavingOrLoading, true);
 	UE_MVVM_SET_PROPERTY_VALUE(SuggestedWidgetVisibility, ESlateVisibility::Collapsed);
-	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(ShouldShowTimeSinceLastSave);
+}
+
+void USaveLoadMarkerViewModel::ConfigureMinimumShowtime(float MinShowtimeSeconds)
+{
+	ConfiguredMinShowtimeSeconds = MinShowtimeSeconds;
 }
 
 void USaveLoadMarkerViewModel::BeginDestroy()
@@ -66,7 +67,9 @@ void USaveLoadMarkerViewModel::UpdateForStatus(USaveGameService::EStatus NewStat
 			UE_MVVM_SET_PROPERTY_VALUE(bIsSaving, true);
 			UE_MVVM_SET_PROPERTY_VALUE(bIsSavingOrLoading, true);
 			UE_MVVM_SET_PROPERTY_VALUE(SuggestedWidgetVisibility, ESlateVisibility::SelfHitTestInvisible);
-			return;
+
+			StartMinShowTimer();
+			break;
 		}
 
 		case USaveGameService::EStatus::Loading:
@@ -75,20 +78,21 @@ void USaveLoadMarkerViewModel::UpdateForStatus(USaveGameService::EStatus NewStat
 			UE_MVVM_SET_PROPERTY_VALUE(bIsSaving, false);
 			UE_MVVM_SET_PROPERTY_VALUE(bIsSavingOrLoading, true);
 			UE_MVVM_SET_PROPERTY_VALUE(SuggestedWidgetVisibility, ESlateVisibility::SelfHitTestInvisible);
-			return;
+
+			StartMinShowTimer();
+			break;
 		}
 
 		case USaveGameService::EStatus::Idle:
 		{
-			const FCurrentSaveGame& CurrentSaveGame = SaveGameService->GetCurrentSaveGame();
+			if (bIsShowingForMinShowtime)
+				return;
+
 			UE_MVVM_SET_PROPERTY_VALUE(bIsLoading, false);
 			UE_MVVM_SET_PROPERTY_VALUE(bIsSaving, false);
 			UE_MVVM_SET_PROPERTY_VALUE(bIsSavingOrLoading, false);
-			UE_MVVM_SET_PROPERTY_VALUE(UtcTimeOfLastSave, CurrentSaveGame.GetUtcTimeOfLastSave().Get(FDateTime::UtcNow()));
 			UE_MVVM_SET_PROPERTY_VALUE(SuggestedWidgetVisibility, ESlateVisibility::Collapsed);
-			UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetTimeSinceLastSave);
-			UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(ShouldShowTimeSinceLastSave);
-			return;
+			break;
 		}
 
 		default:
@@ -98,7 +102,24 @@ void USaveLoadMarkerViewModel::UpdateForStatus(USaveGameService::EStatus NewStat
 			UE_MVVM_SET_PROPERTY_VALUE(bIsSaving, false);
 			UE_MVVM_SET_PROPERTY_VALUE(bIsSavingOrLoading, true);
 			UE_MVVM_SET_PROPERTY_VALUE(SuggestedWidgetVisibility, ESlateVisibility::Collapsed);
-			UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(ShouldShowTimeSinceLastSave);
 		}
 	}
+}
+
+void USaveLoadMarkerViewModel::StartMinShowTimer()
+{
+	if (!ConfiguredMinShowtimeSeconds.IsSet())
+		return;
+
+	bIsShowingForMinShowtime = true;
+	MinShowtimeHandle = FTSTicker::GetCoreTicker().AddTicker(TEXT("USaveLoadMarkerViewModel::MinShowtime"), *ConfiguredMinShowtimeSeconds,
+		[this](float)
+		{
+			bIsShowingForMinShowtime = false;
+			if (SaveGameService.IsValid() && SaveGameService->GetCurrentStatus() == USaveGameService::EStatus::Idle)
+			{
+				UpdateForStatus(USaveGameService::EStatus::Idle);
+			}
+			return false; // = Don't restart timer.
+		});
 }

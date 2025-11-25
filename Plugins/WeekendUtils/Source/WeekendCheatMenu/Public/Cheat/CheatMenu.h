@@ -59,4 +59,5 @@ protected:
 	// --
 
 	void HandleCheatExecuted(const ICheatMenuAction& CheatMenuAction, UWorld* World, TArray<FString> Args);
+	void HandleCloseRequested();
 };

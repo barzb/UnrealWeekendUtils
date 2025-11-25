@@ -175,6 +175,13 @@ UGameServiceBase& UGameServiceManager::StartService(UWorld& TargetWorld, const F
 			ServiceOwner = TargetWorld.GetGameInstance();
 			break;
 	}
+
+	if (!TemplateInstance)
+	{
+		// Use potentially registered template instances:
+		TemplateInstance = FindRegisteredServiceTemplateInstance(ServiceClass, InstanceClass);
+	}
+
 	return StartService(TargetWorld, ServiceClass, *CreateServiceInstance(*ServiceOwner, InstanceClass, TemplateInstance));
 }
 
@@ -278,6 +285,17 @@ TOptional<FGameServiceInstanceClass> UGameServiceManager::FindRegisteredServiceI
 	return TOptional<FGameServiceInstanceClass>();
 }
 
+const UGameServiceBase* UGameServiceManager::FindRegisteredServiceTemplateInstance(const FGameServiceClass& ServiceClass, const FGameServiceInstanceClass& InstanceClass) const
+{
+	for (auto RegisterItr = ServiceClassRegisters.CreateConstIterator(); RegisterItr; ++RegisterItr)
+	{
+		const FServiceClassRegistryEntry* Entry = RegisterItr.Value().Find(ServiceClass);
+		if (Entry && Entry->InstanceClass == InstanceClass)
+			return Entry->InstanceTemplate.Get();
+	}
+	return nullptr;
+}
+
 TArray<FGameServiceClass> UGameServiceManager::GetAllStartedServiceClasses() const
 {
 	return StartOrderedServices;
@@ -359,10 +377,9 @@ UGameServiceBase* UGameServiceManager::CreateServiceInstance(UObject& Owner, con
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UGameServiceManager.CreateServiceInstance"), STAT_GameServiceManager_CreateServiceInstance, STATGROUP_GameService);
 	const FName InstanceName = MakeUniqueObjectName(&Owner, ServiceInstanceClass);
-
-	return IsValid(TemplateInstance)
-		? DuplicateObject<UGameServiceBase>(TemplateInstance, &Owner, InstanceName)
-		: NewObject<UGameServiceBase>(&Owner, ServiceInstanceClass, InstanceName);
+	if (TemplateInstance == nullptr)
+		return NewObject<UGameServiceBase>(&Owner, ServiceInstanceClass, InstanceName);
+	return DuplicateObject<UGameServiceBase>(TemplateInstance, &Owner, InstanceName);
 }
 
 void UGameServiceManager::StartServiceDependencies(UWorld& TargetWorld, const UGameServiceBase& ServiceInstance)

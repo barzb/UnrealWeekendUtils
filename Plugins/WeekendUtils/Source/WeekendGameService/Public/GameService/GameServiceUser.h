@@ -13,8 +13,10 @@
 #include "GameService/GameServiceUtils.h"
 #include "UObject/WeakInterfacePtr.h"
 
+class FSubsystemCollectionBase;
 class UGameServiceBase;
 class USubsystem;
+class UWorldSubsystem;
 
 /**
  * Grants classes inheriting from FGameServiceUser utilities to configure GameService and Subsystem dependencies

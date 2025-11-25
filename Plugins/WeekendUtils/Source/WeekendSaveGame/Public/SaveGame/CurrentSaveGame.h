@@ -26,6 +26,7 @@ struct WEEKENDSAVEGAME_API FCurrentSaveGame
 
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnAfterRestored, const FCurrentSaveGame&);
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnBeforeSaved, const FCurrentSaveGame&);
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnAfterSaved, const FCurrentSaveGame&);
 
 	using FSlotName = FString;
 

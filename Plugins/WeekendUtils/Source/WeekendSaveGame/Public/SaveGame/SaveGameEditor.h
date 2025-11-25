@@ -51,9 +51,9 @@ protected:
 	UFUNCTION(CallInEditor, Category = "Editor", meta = (DevelopmentOnly), DisplayName = "Edit SaveGame File")
 	virtual void EditSaveGameFromFile();
 
-#if WITH_EDITORONLY_DATA
 	virtual void SetSaveGame(const USaveGame* InSaveGame, TOptional<FString> OptionalInfo = {});
 
+#if WITH_EDITORONLY_DATA
 	UPROPERTY(VisibleAnywhere, Transient, Category = "Editor")
 	FString EditorInfo = FString();
 

@@ -18,7 +18,8 @@ TSharedRef<SWidget> UCheatMenu::RebuildWidget()
 {
 	CheatMenu = SNew(SCheatMenu)
 	.NumRecentlyUsedCheatsToShow(16)
-	.OnCheatExecuted_UObject(this, &ThisClass::HandleCheatExecuted);
+	.OnCheatExecuted_UObject(this, &ThisClass::HandleCheatExecuted)
+	.OnCloseRequested_UObject(this, &ThisClass::HandleCloseRequested);
 
 	return CheatMenu.ToSharedRef();
 }
@@ -41,7 +42,11 @@ void UCheatMenu::HandleCheatExecuted(const ICheatMenuAction&, UWorld*, TArray<FS
 {
 	if (bShouldCloseAfterCheatExecution)
 	{
-		OnCloseRequested.Broadcast();
+		HandleCloseRequested();
 	}
 }
 
+void UCheatMenu::HandleCloseRequested()
+{
+	OnCloseRequested.Broadcast();
+}

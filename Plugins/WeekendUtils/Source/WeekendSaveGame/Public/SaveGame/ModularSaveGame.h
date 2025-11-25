@@ -158,7 +158,7 @@ template <typename T>
 T& UModularSaveGame::FindOrAddModule(const FName& ModuleName, const TSubclassOf<T>& ModuleClass)
 {
 	static_assert(TIsDerivedFrom<T, USaveGameModule>::IsDerived, "Type is not derived from USaveGameModule.");
-	if (T* ExistingModule = FindModule<T>(ModuleName))
+	if (T* ExistingModule = FindModule<T>(ModuleName, ModuleClass))
 	{
 		ensure(ExistingModule->GetClass() == ModuleClass);
 		return *ExistingModule;
@@ -181,7 +181,7 @@ template <typename T>
 T* UModularSaveGame::FindModule(const FName& ModuleName, const TSubclassOf<T>& ModuleClass)
 {
 	static_assert(TIsDerivedFrom<T, USaveGameModule>::IsDerived, "Type is not derived from USaveGameModule.");
-	const FName& FindModuleName = (ModuleName.IsNone() ? GetDefault<T>()->DefaultModuleName : ModuleName);
+	const FName& FindModuleName = (ModuleName.IsNone() ? GetDefault<T>(ModuleClass)->DefaultModuleName : ModuleName);
 	auto* FoundModule = Modules.Find(FindModuleName);
 	return ((FoundModule && FoundModule->GetClass() == ModuleClass) ? Cast<T>(FoundModule->Get()) : nullptr);
 }
@@ -198,7 +198,7 @@ template <typename T>
 const T* UModularSaveGame::FindModule(const FName& ModuleName, const TSubclassOf<T>& ModuleClass) const
 {
 	static_assert(TIsDerivedFrom<T, USaveGameModule>::IsDerived, "Type is not derived from USaveGameModule.");
-	const FName& FindModuleName = (ModuleName.IsNone() ? GetDefault<T>()->DefaultModuleName : ModuleName);
+	const FName& FindModuleName = (ModuleName.IsNone() ? GetDefault<T>(ModuleClass)->DefaultModuleName : ModuleName);
 	const auto* FoundModule = Modules.Find(FindModuleName);
 	return ((FoundModule && FoundModule->GetClass() == ModuleClass) ? Cast<T>(FoundModule->Get()) : nullptr);
 }
@@ -213,7 +213,7 @@ template <typename T>
 bool UModularSaveGame::HasModule(const FName& ModuleName, const TSubclassOf<T>& ModuleClass) const
 {
 	static_assert(!TIsAbstract<T>::Value, "Type is abstract.");
-	const auto* FoundModule = FindModule<T>(ModuleName);
+	const auto* FoundModule = FindModule<T>(ModuleName, ModuleClass);
 	return (FoundModule && (FoundModule->GetClass() == ModuleClass));
 }
 

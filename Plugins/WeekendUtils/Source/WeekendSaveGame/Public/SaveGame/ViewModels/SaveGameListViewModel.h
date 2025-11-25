@@ -72,6 +72,14 @@ class WEEKENDSAVEGAME_API USaveGameSaveListViewModel : public USaveGameListViewM
 {
 	GENERATED_BODY()
 
+public:
+	UPROPERTY(FieldNotify, BlueprintReadOnly, Category = "Weekend Utils|Save Game")
+	bool bIsSavingAllowed = true;
+
+	// - USaveGameListViewModel
+	virtual void BeginUsage(TSubclassOf<USaveGameSlotViewModel> SlotClass) override;
+	// --
+
 protected:
 	// - USaveGameListViewModel
 	virtual TArray<FSlotName> GatherRelevantSlotNames() override;
@@ -89,6 +97,13 @@ class WEEKENDSAVEGAME_API USaveGameLoadListViewModel : public USaveGameListViewM
 	GENERATED_BODY()
 
 protected:
+	UPROPERTY(FieldNotify, BlueprintReadOnly, Category = "Weekend Utils|Save Game")
+	bool bIsLoadingAllowed = true;
+
+	// - USaveGameListViewModel
+	virtual void BeginUsage(TSubclassOf<USaveGameSlotViewModel> SlotClass) override;
+	// --
+
 	// - USaveGameListViewModel
 	virtual TArray<FSlotName> GatherRelevantSlotNames() override;
 	virtual bool AllowsLoadingFromWidget() const override { return true; }

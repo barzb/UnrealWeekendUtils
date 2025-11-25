@@ -84,9 +84,9 @@ public:
 		OnHandleAfterLoadedCalled.ExecuteIfBound(SaveGame, SaveGameService);
 	}
 
-	virtual TSet<FSlotName> GetSaveSlotNamesAllowedForSaving() const override { return SavableSlotNames; }
-	virtual TSet<FSlotName> GetSaveSlotNamesAllowedForLoading() const override { return LoadableSlotNames; }
-	virtual FSlotName GetAutosaveSlotName() const override { return AutosaveSlotName; }
+	virtual TSet<FSlotName> GetSaveSlotNamesAllowedForSaving(const FCurrentSaveGame& CurrentSaveGame) const override { return SavableSlotNames; }
+	virtual TSet<FSlotName> GetSaveSlotNamesAllowedForLoading(const FCurrentSaveGame& CurrentSaveGame) const override { return LoadableSlotNames; }
+	virtual FSlotName GetAutosaveSlotName(const FCurrentSaveGame& CurrentSaveGame) const override { return AutosaveSlotName; }
 
 	virtual USaveGame& CreateNewSavegameObject(USaveGameService& SaveGameService) const override
 	{

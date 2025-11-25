@@ -51,7 +51,8 @@ FArchive& FWeekendUtilsSubobjectProxyArchive::operator<<(UObject*& Obj)
 			if (Class)
 			{
 				Obj = NewObject<UObject>(&SubobjectOwner, Class);
-				Obj->Serialize(InnerArchive);
+				FObjectAndNameAsStringProxyArchive SubobjectArchive(InnerArchive, bLoadIfFindFails);
+				Obj->Serialize(SubobjectArchive);
 			}
 		}
 	}
@@ -65,7 +66,8 @@ FArchive& FWeekendUtilsSubobjectProxyArchive::operator<<(UObject*& Obj)
 		InnerArchive << IsSubObjectOfOwner;
 		if (Obj->IsInOuter(&SubobjectOwner))
 		{
-			Obj->Serialize(InnerArchive);
+			FObjectAndNameAsStringProxyArchive SubobjectArchive(InnerArchive, bLoadIfFindFails);
+			Obj->Serialize(SubobjectArchive);
 		}
 	}
 	return *this;

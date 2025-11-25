@@ -30,6 +30,12 @@ public:
 	static void SetOverridePlayInEditorSaveGameSlot(bool bOverride, FString SlotName);
 
 	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game|Editor", meta = (DevelopmentOnly))
+	static void GetOverrideSaveLoadBehavior(bool& bOutIsOverridden, FSoftClassPath& OutBehaviorClass);
+
+	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game|Editor", meta = (DevelopmentOnly))
+	static void SetOverrideSaveLoadBehavior(bool bOverride, FSoftClassPath SetOverrideSaveLoadBehavior);
+
+	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game|Editor", meta = (DevelopmentOnly))
 	static TArray<FString> FindAllSaveGamePresetNames();
 
 	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game")
@@ -40,4 +46,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game")
 	static bool IsSavingAllowedForWorld(UWorld* World);
+
+	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game")
+	static TArray<FSoftClassPath> GetAllAvailableSaveLoadBehaviorClasses();
 };

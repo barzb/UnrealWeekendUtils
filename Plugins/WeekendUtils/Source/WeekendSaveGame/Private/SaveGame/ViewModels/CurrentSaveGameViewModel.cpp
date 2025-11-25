@@ -18,10 +18,11 @@ UCurrentSaveGameViewModel::UCurrentSaveGameViewModel()
 
 void UCurrentSaveGameViewModel::BeginUsage()
 {
-	USaveGameService& SaveGameService = UseGameService<USaveGameService>(this);
-	SaveGameService.OnAfterRestored.AddUObject(this, &ThisClass::UpdateForCurrentSaveGame);
+	SaveGameService = UseGameServiceAsPtr<USaveGameService>(this);
+	SaveGameService->OnAfterRestored.AddUObject(this, &ThisClass::UpdateForCurrentSaveGame);
+	SaveGameService->OnAvailableSaveGamesChanged.AddUObject(this, &ThisClass::UpdateTimeSinceLastSave);
 
-	UpdateForCurrentSaveGame(SaveGameService.GetCurrentSaveGame());
+	UpdateForCurrentSaveGame(SaveGameService->GetCurrentSaveGame());
 }
 
 void UCurrentSaveGameViewModel::ContinueSaveGame()
@@ -37,6 +38,24 @@ void UCurrentSaveGameViewModel::CreateNewGame()
 	UseGameService<USaveGameService>(this).CreateAndRestoreNewSaveGameAsCurrent();
 }
 
+FTimespan UCurrentSaveGameViewModel::GetTimespanSinceLastSave() const
+{
+	return FDateTime::UtcNow() - UtcTimeOfLastSave;
+}
+
+ECommonAvailability UCurrentSaveGameViewModel::GetTimeSinceLastSave(int32& OutHours, int32& OutMinutes, int32& OutSeconds) const
+{
+	if (!bHasTimeOfLastSave)
+		return ECommonAvailability::Unavailable;
+
+	const FDateTime CurrentUtcTime = FDateTime::UtcNow();
+	const FTimespan TimeSinceLastSave = CurrentUtcTime - UtcTimeOfLastSave;
+	OutHours = FMath::FloorToInt32(TimeSinceLastSave.GetTotalHours());
+	OutMinutes = TimeSinceLastSave.GetMinutes();
+	OutSeconds = TimeSinceLastSave.GetSeconds();
+	return ECommonAvailability::Available;
+}
+
 void UCurrentSaveGameViewModel::BeginDestroy()
 {
 	EndUsage();
@@ -47,12 +66,29 @@ void UCurrentSaveGameViewModel::BeginDestroy()
 void UCurrentSaveGameViewModel::UpdateForCurrentSaveGame(const FCurrentSaveGame& CurrentSaveGame)
 {
 	UE_MVVM_SET_PROPERTY_VALUE(bCanContinue, (CurrentSaveGame.IsValid() && !CurrentSaveGame.IsNewGame()));
+	UpdateTimeSinceLastSave();
+}
+
+void UCurrentSaveGameViewModel::UpdateTimeSinceLastSave()
+{
+	if (TOptional<FDateTime> Timestamp = SaveGameService->GetCurrentSaveGame().GetUtcTimeOfLastSave(); Timestamp.IsSet())
+	{
+		UE_MVVM_SET_PROPERTY_VALUE(bHasTimeOfLastSave, true);
+		UE_MVVM_SET_PROPERTY_VALUE(UtcTimeOfLastSave, *Timestamp);
+		UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetTimespanSinceLastSave);
+	}
+	else
+	{
+		UE_MVVM_SET_PROPERTY_VALUE(bHasTimeOfLastSave, false);
+	}
 }
 
 void UCurrentSaveGameViewModel::EndUsage()
 {
-	if (USaveGameService* SaveGameService = FindOptionalGameService<USaveGameService>().Get())
+	if (SaveGameService)
 	{
 		SaveGameService->OnAfterRestored.RemoveAll(this);
+		SaveGameService->OnAvailableSaveGamesChanged.RemoveAll(this);
+		SaveGameService = nullptr;
 	}
 }

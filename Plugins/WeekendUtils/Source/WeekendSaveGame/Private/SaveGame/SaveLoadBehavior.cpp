@@ -115,7 +115,8 @@ bool USaveLoadBehavior::TryTravelToSavedLevel(const FCurrentSaveGame& SaveGame)
 	}
 
 	const FName LevelToLoad = HeaderData->LoadedLevel.GetLongPackageFName();
-	UGameplayStatics::OpenLevel(this, LevelToLoad);
+	const FString Options = MakeTravelOptions(SaveGame);
+	UGameplayStatics::OpenLevel(this, LevelToLoad, true, Options);
 	return true;
 }
 
@@ -133,7 +134,7 @@ UDefaultSaveLoadBehavior::UDefaultSaveLoadBehavior()
 
 void UDefaultSaveLoadBehavior::HandleGameStart(USaveGameService& SaveGameService)
 {
-	SaveGameService.PreloadSaveGamesAsync(GetSaveSlotNamesAllowedForLoading(), USaveGameService::FOnPreloadCompleted::CreateWeakLambda(this,
+	SaveGameService.PreloadSaveGamesAsync(GetSaveSlotNamesAllowedForLoading(SaveGameService.GetCurrentSaveGame()), USaveGameService::FOnPreloadCompleted::CreateWeakLambda(this,
 		[this, SaveGameService = MakeWeakObjectPtr(&SaveGameService)](const TArray<USaveGame*>& PreloadedSaveGames, const TArray<FSlotName>& PreloadedSlotNames)
 		{
 			if (!SaveGameService.IsValid())
@@ -142,15 +143,18 @@ void UDefaultSaveLoadBehavior::HandleGameStart(USaveGameService& SaveGameService
 		}));
 }
 
-TSet<USaveLoadBehavior::FSlotName> UDefaultSaveLoadBehavior::GetSaveSlotNamesAllowedForSaving() const
+TSet<USaveLoadBehavior::FSlotName> UDefaultSaveLoadBehavior::GetSaveSlotNamesAllowedForSaving(const FCurrentSaveGame& CurrentSaveGame) const
 {
 	return SaveSlotNames;
 }
 
-TSet<USaveLoadBehavior::FSlotName> UDefaultSaveLoadBehavior::GetSaveSlotNamesAllowedForLoading() const
+TSet<USaveLoadBehavior::FSlotName> UDefaultSaveLoadBehavior::GetSaveSlotNamesAllowedForLoading(const FCurrentSaveGame& CurrentSaveGame) const
 {
 	TSet<FSlotName> Result = SaveSlotNames;
-	Result.Add(GetAutosaveSlotName());
+	if (const FSlotName AutosaveSlotName = GetAutosaveSlotName(CurrentSaveGame); !AutosaveSlotName.IsEmpty())
+	{
+		Result.Add(AutosaveSlotName);
+	}
 	return Result;
 }
 
@@ -208,17 +212,17 @@ void UDefaultPlayInEditorSaveLoadBehavior::HandleGameStart(USaveGameService& Sav
 #endif
 }
 
-TSet<USaveLoadBehavior::FSlotName> UDefaultPlayInEditorSaveLoadBehavior::GetSaveSlotNamesAllowedForSaving() const
+TSet<USaveLoadBehavior::FSlotName> UDefaultPlayInEditorSaveLoadBehavior::GetSaveSlotNamesAllowedForSaving(const FCurrentSaveGame&) const
 {
 	return { GetPlayInEditorSlotName() };
 }
 
-TSet<USaveLoadBehavior::FSlotName> UDefaultPlayInEditorSaveLoadBehavior::GetSaveSlotNamesAllowedForLoading() const
+TSet<USaveLoadBehavior::FSlotName> UDefaultPlayInEditorSaveLoadBehavior::GetSaveSlotNamesAllowedForLoading(const FCurrentSaveGame&) const
 {
 	return { GetPlayInEditorSlotName() };
 }
 
-USaveLoadBehavior::FSlotName UDefaultPlayInEditorSaveLoadBehavior::GetAutosaveSlotName() const
+USaveLoadBehavior::FSlotName UDefaultPlayInEditorSaveLoadBehavior::GetAutosaveSlotName(const FCurrentSaveGame&) const
 {
 	return GetPlayInEditorSlotName();
 }

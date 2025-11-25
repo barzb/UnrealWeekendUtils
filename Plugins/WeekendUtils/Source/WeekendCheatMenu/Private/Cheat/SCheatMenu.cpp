@@ -136,6 +136,7 @@ void SCheatMenu::Construct(const FArguments& InArgs)
 	CurrentTabName = DEFAULT_TAB_NAME;
 	NumRecentlyUsedCheatsToShow = InArgs._NumRecentlyUsedCheatsToShow;
 	OnCheatExecuted = InArgs._OnCheatExecuted;
+	OnCloseRequested = InArgs._OnCloseRequested;
 
 	bCanSupportFocus = true;
 
@@ -158,20 +159,46 @@ void SCheatMenu::Construct(const FArguments& InArgs)
 		.VAlign(VAlign_Fill)
 		[
 			SAssignNew(TabList, SVerticalBox)
-
-			// [Left|Top] Search Box:
-			+SVerticalBox::Slot()
-			.AutoHeight()
-			.Padding(0.f, 0.f, 0.f, 5.f)
-			[
-				SNew(SSearchBox)
-				.ToolTipText(INVTEXT("Filter Cheats"))
-				.MinDesiredWidth(96.f)
-				.DelayChangeNotificationsWhileTyping(true)
-				.OnTextChanged(this, &SCheatMenu::HandleFilterTextChanged)
-				.OnTextCommitted_Lambda([this](const FText& NewFilterText, ETextCommit::Type){ HandleFilterTextChanged(NewFilterText); })
-			]
 		]
+	];
+
+	if (InArgs._OnCloseRequested.IsBound())
+	{
+		// [Left|Top] Close Button:
+		TabList->AddSlot()
+		.AutoHeight()
+		.HAlign(HAlign_Left)
+		.Padding(0.f, 0.f, 0.f, 5.f)
+		[
+			SNew(SButton)
+			.HAlign(HAlign_Fill)
+			.VAlign(VAlign_Fill)
+			.ToolTipText(INVTEXT("Close Cheat Menu"))
+			.ButtonStyle(FAppStyle::Get(), "Window.CloseButtonHover")
+			.OnClicked_Lambda([this]()
+			{
+				OnCloseRequested.ExecuteIfBound();
+				return FReply::Handled();
+			})
+			.ContentPadding(4.0)
+			[
+				SNew(SImage)
+				.Image(FAppStyle::GetBrush("Icons.X"))
+			]
+		];
+	}
+
+	// [Left|Top] Search Box:
+	TabList->AddSlot()
+	.AutoHeight()
+	.Padding(0.f, 0.f, 0.f, 5.f)
+	[
+		SNew(SSearchBox)
+		.ToolTipText(INVTEXT("Filter Cheats"))
+		.MinDesiredWidth(96.f)
+		.DelayChangeNotificationsWhileTyping(true)
+		.OnTextChanged(this, &SCheatMenu::HandleFilterTextChanged)
+		.OnTextCommitted_Lambda([this](const FText& NewFilterText, ETextCommit::Type){ HandleFilterTextChanged(NewFilterText); })
 	];
 
 	// [Right] Current Tab Content:
