@@ -68,7 +68,7 @@ UGameServiceManager& UGameServiceManager::SummonInstance(const UObject* WorldCon
 
 UGameServiceManager* UGameServiceManager::FindInstance(const UObject* WorldContextObject)
 {
-	check(WorldContextObject);
+	check(WorldContextObject && !WorldContextObject->HasAnyFlags(RF_ClassDefaultObject));
 	const UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
 	check(World);
 	const UGameInstance* GameInstance = World->GetGameInstance();

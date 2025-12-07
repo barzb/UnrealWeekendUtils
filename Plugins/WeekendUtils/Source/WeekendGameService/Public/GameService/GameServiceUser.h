@@ -41,7 +41,8 @@ struct WEEKENDGAMESERVICE_API FGameServiceUserConfig
 	template <typename T> FGameServiceUserConfig& AddOptionalSubsystemDependencies() { OptionalSubsystemDependencies.Add<T>(); return *this; }
 
 	FORCEINLINE const UObject* GetUserObject() const { return UserObject.Get(); }
-	FORCEINLINE UWorld* GetWorld() const { return UserObject.IsValid() ? UserObject->GetWorld() : nullptr; }
+	const UObject* GetWorldContext(const UObject* OverrideWorldContext) const;
+	UWorld* GetWorld(const UObject* OverrideWorldContext) const;
 
 	/**
 	 * Dependency config container for game services. Call ServiceDependencies.Add<T>() in the constructor of inherited classes.
@@ -89,6 +90,7 @@ private:
  *     @example: WaitForDependencies(FOnWaitingFinished::CreateUObject(this, &ThisClass::ExecuteCodeRelyingOnAsyncDependencies));
  *
  * @remark Inheriting classes must implement @ConfigureGameServiceUser().
+ * @remark Much of the API allows passing an @OptionalWorldContext object allowing to access services also on ClassDefaultObjects.
  */
 class WEEKENDGAMESERVICE_API FGameServiceUser
 {
@@ -111,9 +113,9 @@ public:
 	TArray<TSubclassOf<USubsystem>> GetOptionalSubsystemClassDependencies() const;
 
 	/** @returns whether all game service dependencies are running and all subsystem dependencies are available. */
-	bool AreAllDependenciesReady() const;
-	bool AreServiceDependenciesReady() const;
-	bool AreSubsystemDependenciesReady() const;
+	bool AreAllDependenciesReady(const UObject* OptionalWorldContext = nullptr) const;
+	bool AreServiceDependenciesReady(const UObject* OptionalWorldContext = nullptr) const;
+	bool AreSubsystemDependenciesReady(const UObject* OptionalWorldContext = nullptr) const;
 
 protected:
 	FGameServiceUser() = default;
@@ -126,8 +128,8 @@ protected:
 	 * However, async services might take a while until they are considered 'running', even when they are started on demand.
 	 */
 	DECLARE_DELEGATE(FOnWaitingFinished)
-	void WaitForDependencies(FOnWaitingFinished Callback);
-	void WaitForDependencies(TFunction<void( )> Callback);
+	void WaitForDependencies(FOnWaitingFinished Callback, const UObject* OptionalWorldContext = nullptr);
+	void WaitForDependencies(TFunction<void( )> Callback, const UObject* OptionalWorldContext = nullptr);
 
 	/**
 	 * Only to be called by @UWorldSubsystem classes inheriting from @FGameServiceUser, in their @Initialize call before waiting for dependencies.
@@ -142,58 +144,65 @@ protected:
 	/**
 	 * @returns another game service that is part of the ServiceDependencies config.
 	 * If the desired service is not yet created or running, it will be created and started on demand.
+	 * If called on a CDO, please pass a world-bound WorldContext as the optional argument.
 	 */
-	UGameServiceBase& UseGameService(const FGameServiceClass& ServiceClass) const;
+	UGameServiceBase& UseGameService(const FGameServiceClass& ServiceClass, const UObject* OptionalWorldContext = nullptr) const;
 
-	/** @returns another game service as weak pointer, even when not configured as dependency, considering it might not be available. */
-	TWeakObjectPtr<UGameServiceBase> FindOptionalGameService(const FGameServiceClass& ServiceClass) const;
+	/** 
+	 * @returns another game service as weak pointer, even when not configured as dependency, considering it might not be available. 
+	 * If called on a CDO, please pass a world-bound WorldContext as the optional argument.
+	 */
+	TWeakObjectPtr<UGameServiceBase> FindOptionalGameService(const FGameServiceClass& ServiceClass, const UObject* OptionalWorldContext = nullptr) const;
 
-	/** @returns a subsystem that was configured as dependency as weak pointer, considering it might not yet be available. */
-	TWeakObjectPtr<USubsystem> FindSubsystemDependency(const TSubclassOf<USubsystem>& SubsystemClass) const;
+	/** 
+	 * @returns a subsystem that was configured as dependency as weak pointer, considering it might not yet be available.
+	 * If called on a CDO, please pass a world-bound WorldContext as the optional argument.
+	 */
+	TWeakObjectPtr<USubsystem> FindSubsystemDependency(const TSubclassOf<USubsystem>& SubsystemClass, const UObject* OptionalWorldContext = nullptr) const;
 
 	/** @returns whether a certain game service class is currently registered. */
-	bool IsGameServiceRegistered(const FGameServiceClass& ServiceClass) const;
+	bool IsGameServiceRegistered(const FGameServiceClass& ServiceClass, const UObject* OptionalWorldContext = nullptr) const;
 
 	template<typename T> typename TEnableIf<TIsDerivedFrom<T, UGameServiceBase>::IsDerived, T&>::Type
-	/*(T&)*/ UseGameService() const
+	/*(T&)*/ UseGameService(const UObject* OptionalWorldContext = nullptr) const
 	{
-		return *Cast<T>(UseGameService_Internal(T::StaticClass()));
+		return *Cast<T>(UseGameService_Internal(T::StaticClass(), OptionalWorldContext));
 	}
 
 	template<typename T> typename TEnableIf<TIsDerivedFrom<T, UGameServiceBase>::IsDerived, TObjectPtr<T>>::Type
-	/*(TObjectPtr<T>)*/ UseGameServiceAsPtr() const
+	/*(TObjectPtr<T>)*/ UseGameServiceAsPtr(const UObject* OptionalWorldContext = nullptr) const
 	{
-		return TObjectPtr<T>(Cast<T>(UseGameService_Internal(T::StaticClass())));
+		return TObjectPtr<T>(Cast<T>(UseGameService_Internal(T::StaticClass(), OptionalWorldContext)));
 	}
 
 	template<typename T> typename TEnableIf<TIsIInterface<T>::Value, TScriptInterface<T>>::Type
-	/*(TScriptInterface<T>)*/ UseGameServiceAsInterface() const
+	/*(TScriptInterface<T>)*/ UseGameServiceAsInterface(const UObject* OptionalWorldContext = nullptr) const
 	{
-		return TScriptInterface<T>(UseGameService_Internal(T::UClassType::StaticClass()));
+		return TScriptInterface<T>(UseGameService_Internal(T::UClassType::StaticClass(), OptionalWorldContext));
 	}
 
 	template<typename T> typename TEnableIf<TIsDerivedFrom<T, UGameServiceBase>::IsDerived, TWeakObjectPtr<T>>::Type
-	/*(TWeakObjectPtr<T>)*/ UseGameServiceAsWeakPtr() const
+	/*(TWeakObjectPtr<T>)*/ UseGameServiceAsWeakPtr(const UObject* OptionalWorldContext = nullptr) const
 	{
-		return TWeakObjectPtr<T>(Cast<T>(UseGameService_Internal(T::StaticClass())));
+		return TWeakObjectPtr<T>(Cast<T>(UseGameService_Internal(T::StaticClass(), OptionalWorldContext)));
 	}
 
 	template<typename T> typename TEnableIf<TIsIInterface<T>::Value, TWeakInterfacePtr<T>>::Type
-	/*(TWeakInterfacePtr<T>)*/ UseGameServiceAsWeakInterface() const
+	/*(TWeakInterfacePtr<T>)*/ UseGameServiceAsWeakInterface(const UObject* OptionalWorldContext = nullptr) const
 	{
-		return TWeakInterfacePtr<T>(UseGameService_Internal(T::UClassType::StaticClass()));
+		return TWeakInterfacePtr<T>(UseGameService_Internal(T::UClassType::StaticClass(), OptionalWorldContext));
 	}
 
 	template<typename T> typename TEnableIf<TIsDerivedFrom<T, UGameServiceBase>::IsDerived, TWeakObjectPtr<T>>::Type
-	/*(TWeakObjectPtr<T>)*/ FindOptionalGameService() const
+	/*(TWeakObjectPtr<T>)*/ FindOptionalGameService(const UObject* OptionalWorldContext = nullptr) const
 	{
-		return TWeakObjectPtr<T>(Cast<T>(FindOptionalGameService_Internal(T::StaticClass())));
+		return TWeakObjectPtr<T>(Cast<T>(FindOptionalGameService_Internal(T::StaticClass(), OptionalWorldContext)));
 	}
 
 	template<typename T> typename TEnableIf<TIsIInterface<T>::Value, TWeakInterfacePtr<T>>::Type
-	/*(TWeakInterfacePtr<T>)*/ FindOptionalGameService() const
+	/*(TWeakInterfacePtr<T>)*/ FindOptionalGameService(const UObject* OptionalWorldContext = nullptr) const
 	{
-		return TWeakInterfacePtr<T>(FindOptionalGameService_Internal(T::UClassType::StaticClass()));
+		return TWeakInterfacePtr<T>(FindOptionalGameService_Internal(T::UClassType::StaticClass(), OptionalWorldContext));
 	}
 
 	template<typename T>
@@ -210,10 +219,10 @@ protected:
 	}
 
 	/** When waiting for dependencies, this is called automatically each tick, but can also be called manually by derived class. */
-	void PollPendingDependencyWaitCallbacks();
+	void PollPendingDependencyWaitCallbacks(const UObject* OptionalWorldContext = nullptr);
 
 	/** When waiting for dependencies, this can be called when the wait should be canceled, i.e. when the service user is prematurely destroyed. */
-	void StopWaitingForDependencies();
+	void StopWaitingForDependencies(const UObject* OptionalWorldContext = nullptr);
 
 	/** Clears the cache of dependency instances. Should be called when the service user re-configures dependencies at runtime. */
 	void InvalidateCachedDependencies() const;
@@ -222,12 +231,26 @@ private:
 	TArray<FOnWaitingFinished> PendingDependencyWaitCallbacks = {};
 	TOptional<FTimerHandle> PendingDependencyWaitTimerHandle = {};
 
-	mutable TMap<FGameServiceClass, TWeakObjectPtr<UGameServiceBase>> CachedServiceDependencies = {};
-	mutable TMap<TSubclassOf<USubsystem>, TWeakObjectPtr<USubsystem>> CachedSubsystemDependencies = {};
+	struct FCachedDependencies : private TMap<const UClass*, TWeakObjectPtr<UObject>>
+	{
+		using TMap::Empty;
+		void Add(const UClass* Class, UObject* Dependency)
+		{
+			TMap::Add(Class, MakeWeakObjectPtr(Dependency));
+		}
+		template <typename T>
+		T* Find(const UClass* Class) const
+		{
+			const auto* FoundDependency = TMap::Find(Class);
+			return FoundDependency && FoundDependency->IsValid() ? Cast<T>(*FoundDependency) : nullptr;
+		}
+	};
+	mutable FCachedDependencies CachedServiceDependencies = {};
+	mutable FCachedDependencies CachedSubsystemDependencies = {};
 
 	// - Internal calls for templates using only UObject, so the child class does not have to include "GameServiceBase.h" when templates are inlined
-	UObject* UseGameService_Internal(const TSubclassOf<UObject>& ServiceClass) const;
-	UObject* FindOptionalGameService_Internal(const FGameServiceClass& ServiceClass) const;
+	UObject* UseGameService_Internal(const TSubclassOf<UObject>& ServiceClass, const UObject* OptionalWorldContext) const;
+	UObject* FindOptionalGameService_Internal(const FGameServiceClass& ServiceClass, const UObject* OptionalWorldContext) const;
 	void InitializeWorldSubsystemDependencies_Internal(FSubsystemCollectionBase& SubsystemCollection);
 	// --
 };
