@@ -18,7 +18,7 @@ void USaveGameModule_SaveLoadDebugHistory::PreSaveModule()
 
 	if (!SaveGameService)
 	{
-		SaveGameService = UGameServiceLocator::FindService<USaveGameService>();
+		SaveGameService = UGameServiceLocator::FindService<USaveGameService>(this);
 	}
 	if (SaveGameService)
 	{

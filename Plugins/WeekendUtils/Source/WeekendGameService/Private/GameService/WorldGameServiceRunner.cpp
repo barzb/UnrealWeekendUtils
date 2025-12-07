@@ -7,7 +7,7 @@
 ///
 ///////////////////////////////////////////////////////////////////////////////////////
 
-#include "WorldGameServiceRunner.h"
+#include "GameService/WorldGameServiceRunner.h"
 
 #include "WeekendGameService.h"
 #include "GameService/GameModeServiceConfigBase.h"
@@ -42,7 +42,8 @@ bool UWorldGameServiceRunner::DoesSupportWorldType(const EWorldType::Type WorldT
 bool UWorldGameServiceRunner::ShouldCreateSubsystem(UObject* Outer) const
 {
 	// Do not start services for the dummy world that gets initialized on engine startup:
-	return Super::ShouldCreateSubsystem(Outer) && Outer->HasAnyFlags(RF_WasLoaded);
+	return Super::ShouldCreateSubsystem(Outer) &&
+		(GIsAutomationTesting || Outer->HasAnyFlags(RF_WasLoaded));
 }
 
 void UWorldGameServiceRunner::Initialize(FSubsystemCollectionBase& Collection)
@@ -77,7 +78,7 @@ void UWorldGameServiceRunner::TickRunningServices(float DeltaTime)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UWorldGameServiceRunner.TickRunningServices"), STAT_WorldGameServiceRunner_TickRunningServices, STATGROUP_GameService);
 
-	for (UGameServiceBase* RunningService : UGameServiceManager::Get().GetAllStartedServiceInstances())
+	for (UGameServiceBase* RunningService : UGameServiceManager::SummonInstance(this).GetAllStartedServiceInstances())
 	{
 		if (!IsValid(RunningService) || !RunningService->IsTickable())
 			continue;
@@ -96,7 +97,7 @@ void UWorldGameServiceRunner::Deinitialize()
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UWorldGameServiceRunner.Deinitialize"), STAT_WorldGameServiceRunner_Deinitialize, STATGROUP_GameService);
 
 	// Clean up the ServiceManager, so the service runner in the next world can start anew:
-	if (UGameServiceManager* ServiceManager = UGameServiceManager::GetPtr(); IsValid(ServiceManager))
+	if (UGameServiceManager* ServiceManager = UGameServiceManager::FindInstance(this); IsValid(ServiceManager))
 	{
 		ServiceManager->ShutdownAllServicesWithLifetime(EGameServiceLifetime::ShutdownWithWorld);
 		ServiceManager->ClearServiceRegister(EGameServiceLifetime::ShutdownWithWorld);
@@ -114,9 +115,10 @@ void UWorldGameServiceRunner::SetServiceConfigForNextWorld(UGameServiceConfig& S
 
 void UWorldGameServiceRunner::RegisterAutoServiceConfigs()
 {
+	UGameServiceManager& GameServiceManager = UGameServiceManager::SummonInstance(this);
 	if (Internal::GConfigInstanceForNextWorld.IsValid())
 	{
-		UGameServiceManager::Get().RegisterServices(*Internal::GConfigInstanceForNextWorld);
+		GameServiceManager.RegisterServices(*Internal::GConfigInstanceForNextWorld);
 		Internal::GConfigInstanceForNextWorld.Reset();
 	}
 
@@ -126,7 +128,7 @@ void UWorldGameServiceRunner::RegisterAutoServiceConfigs()
 		UE_LOG(LogGameService, Log, TEXT("Matching GameModeServiceConfig (%s) found for current world (%s)."),
 			*GetNameSafe(AutoConfig->GetClass()), *GetNameSafe(GetWorld()));
 
-		UGameServiceManager::Get().RegisterServices(*AutoConfig);
+		GameServiceManager.RegisterServices(*AutoConfig);
 	}
 
 	// Configs by World name:
@@ -135,21 +137,21 @@ void UWorldGameServiceRunner::RegisterAutoServiceConfigs()
 		UE_LOG(LogGameService, Log, TEXT("Matching WorldServiceConfig (%s) found for current world (%s)."),
 			*GetNameSafe(AutoConfig->GetClass()), *GetNameSafe(GetWorld()));
 
-		UGameServiceManager::Get().RegisterServices(*AutoConfig);
+		GameServiceManager.RegisterServices(*AutoConfig);
 	}
 }
 
 void UWorldGameServiceRunner::StartRegisteredServices()
 {
 	UE_LOG(LogGameService, Verbose, TEXT("WorldGameServiceRunner will now start registered game services."));
-	UGameServiceManager::Get().StartRegisteredServices(*GetWorld());
+	UGameServiceManager::SummonInstance(this).StartRegisteredServices(*GetWorld());
 }
 
-TArray<TSubclassOf<UWorldSubsystem>> UWorldGameServiceRunner::GatherWorldSubsystemDependencies()
+TArray<TSubclassOf<UWorldSubsystem>> UWorldGameServiceRunner::GatherWorldSubsystemDependencies() const
 {
 	TArray<TSubclassOf<UWorldSubsystem>> Result;
 
-	TArray<FGameServiceInstanceClass> ServiceInstanceClasses = UGameServiceManager::Get().GetAllRegisteredServiceInstanceClasses();
+	TArray<FGameServiceInstanceClass> ServiceInstanceClasses = UGameServiceManager::SummonInstance(this).GetAllRegisteredServiceInstanceClasses();
 	for (const FGameServiceInstanceClass& ServiceClass : ServiceInstanceClasses)
 	{
 		const auto GameServiceCDO = ServiceClass->GetDefaultObject<UGameServiceBase>();

@@ -28,10 +28,22 @@ namespace WeekendUtils
 
 		// Create and initialize game instance
 		GameInstance = NewObject<UGameInstance>(GEngine);
-		GameInstance->InitializeStandalone(*NewWorldName); // -> indirectly calls GameInstance->Init();
 
-		World = GameInstance->GetWorld();
+		World = UWorld::CreateWorld(EWorldType::Game, false, *InWorldName, nullptr, true, ERHIFeatureLevel::Num, nullptr, true);
 		World->GetWorldSettings()->DefaultGameMode = AGameModeBase::StaticClass();
+		World->SetShouldTick(false);
+		World->AddToRoot();
+
+		FWorldContext& WorldContext = GEngine->CreateNewWorldContext(EWorldType::Game);
+		WorldContext.OwningGameInstance = GameInstance;
+		World->SetGameInstance(GameInstance);
+		WorldContext.SetCurrentWorld(World);
+
+		// (i) GameInstance is initialized BEFORE the world here. This behavior seems inconsistent in the engine flow.
+		// GameInstance->InitializeStandalone() initializes the world first, which leads to issues with GameServices.
+		// But loading a world from an asset will init the world after the GameInstance, which sounds more reasonable.
+		GameInstance->Init();
+		World->InitWorld();
 	}
 
 	FScopedAutomationTestWorld::~FScopedAutomationTestWorld()
@@ -48,22 +60,16 @@ namespace WeekendUtils
 			World->FlushLevelStreaming(EFlushLevelStreamingType::Visibility);
 			World->EndPlay(EEndPlayReason::Quit);
 
-			for (AActor* ActorItr : TActorRange<AActor>(World))
-			{
-				ActorItr->RouteEndPlay(EEndPlayReason::Quit);
-			}
-
 			if (IsValid(Viewport))
 			{
 				Viewport->DetachViewportClient();
 			}
 
-			if (World->GetGameInstance() != nullptr)
+			if (GameInstance != nullptr)
 			{
-				World->GetGameInstance()->Shutdown();
+				GameInstance->Shutdown();
 			}
 
-			World->CleanupWorld();
 			World->DestroyWorld(true);
 			GEngine->DestroyWorldContext(World);
 		}
@@ -77,6 +83,7 @@ namespace WeekendUtils
 
 		// Run Garbage Collection to force destruction
 		CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS);
+		GEngine->CheckAndHandleStaleWorldObjectReferences();
 	}
 
 	void FScopedAutomationTestWorld::InitializeGame() { InitializeGame(FConfig()); }

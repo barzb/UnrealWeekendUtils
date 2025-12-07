@@ -39,7 +39,9 @@ public:
 	UPROPERTY(FieldNotify, BlueprintReadOnly, Category = "Weekend Utils|Save Game")
 	TArray<TObjectPtr<USaveGameSlotViewModel>> Slots = {};
 
-	USaveGameListViewModel();
+	// - FGameServiceUser
+	virtual FGameServiceUserConfig ConfigureGameServiceUser() const override;
+	// --
 
 	UFUNCTION(BlueprintCallable, Category = "Weekend Utils|Save Game")
 	virtual void BeginUsage(TSubclassOf<USaveGameSlotViewModel> SlotClass);

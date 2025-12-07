@@ -29,7 +29,9 @@ class WEEKENDSAVEGAME_API USaveLoadMarkerViewModel : public UMVVMViewModelBase,
 	GENERATED_BODY()
 
 public:
-	USaveLoadMarkerViewModel();
+	// - FGameServiceUser
+	virtual FGameServiceUserConfig ConfigureGameServiceUser() const override;
+	// --
 
 	UPROPERTY(FieldNotify, BlueprintReadOnly, Category = "Weekend Utils|Save Game")
 	ESlateVisibility SuggestedWidgetVisibility = ESlateVisibility::Collapsed;

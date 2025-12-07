@@ -27,7 +27,7 @@ void USaveGameActorComponent::InitializeComponent()
 
 	if (GetWorld() && GetWorld()->IsGameWorld())
 	{
-		UModularSaveGame* ModularSaveGame = UModularSaveGame::GetMutableCurrent();
+		UModularSaveGame* ModularSaveGame = UModularSaveGame::FindMutableCurrent(this);
 		if (!IsValid(ModularSaveGame))
 			return;
 

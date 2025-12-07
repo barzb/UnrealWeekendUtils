@@ -13,6 +13,8 @@
 
 #include "CoreMinimal.h"
 
+#include "Tests/AutomationCommon.h"
+
 class AGameModeBase;
 class APlayerController;
 class APlayerState;
@@ -33,7 +35,7 @@ namespace WeekendUtils
 	{
 	public:
 		explicit FScopedAutomationTestWorld(FString InWorldName);
-		~FScopedAutomationTestWorld();
+		virtual ~FScopedAutomationTestWorld();
 
 		/** Optional config for @InitializeGame() */
 		struct FConfig
@@ -51,7 +53,6 @@ namespace WeekendUtils
 
 		FORCEINLINE UWorld* AsPtr() const { return World; }
 		FORCEINLINE UWorld& AsRef() const { return *World; }
-
 
 		TObjectPtr<UWorld> World = nullptr;
 		TObjectPtr<UGameInstance> GameInstance = nullptr;

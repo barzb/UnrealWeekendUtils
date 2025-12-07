@@ -28,9 +28,8 @@ class WEEKENDSAVEGAME_API URestorableGameServiceBase : public UAsyncGameServiceB
 	GENERATED_BODY()
 
 public:
-	URestorableGameServiceBase();
-
 	// - UAsyncGameServiceBase
+	virtual FGameServiceUserConfig ConfigureGameServiceUser() const override;
 	virtual void BeginServiceStart() override final;
 	virtual void BeginServiceShutdown(bool bIsWorldTearingDown) override;
 	virtual TOptional<FString> GetServiceStatusInfo() const override;

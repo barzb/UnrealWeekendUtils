@@ -12,20 +12,21 @@
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 
-#include "GameInstanceServiceDestroyer.generated.h"
+#include "GameInstanceServiceTerminator.generated.h"
 
 class UGameServiceConfig;
 
 /**
- * The singleton instance of this subsystem for each game instance will take care of maintaining the
- * game services whose lifetime is bound to it, in cooperation with the persistent @UGameServiceManager.
+ * The singleton instance of this subsystem for each game instance will take care of terminating the
+ * @UGameServiceManager and all its services whose lifetime bound to the game instance.
  *
  * The runner will do the following things:
- * - Shutdown relevant running services when the game instance shuts down
- * - Clears relevant registered service configs when the game instance shuts down
+ * - Shutdown ALL running services when the game instance shuts down
+ * - Clears ALL registered service configs when the game instance shuts down
+ * - Terminate the UGameServiceManager instance for this GameInstance
  */
-UCLASS()
-class UGameInstanceServiceDestroyer : public UGameInstanceSubsystem
+UCLASS(MinimalAPI)
+class UGameInstanceServiceTerminator final : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
 

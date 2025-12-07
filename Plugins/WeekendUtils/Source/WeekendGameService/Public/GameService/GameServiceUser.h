@@ -19,49 +19,29 @@ class USubsystem;
 class UWorldSubsystem;
 
 /**
- * Grants classes inheriting from FGameServiceUser utilities to configure GameService and Subsystem dependencies
- * and the possibility to directly access those dependencies in their runtime code.
- *
- * Intended usage:
- * - Inherit your @UClass from @FGameServiceUser
- * - Configure dependencies in your class constructor:
- *     @example: ServiceDependencies.Add<USomeGameService>();
- *     @example: SubsystemDependencies.Add<USomeSubsystem>();
- * - Access services directly in your runtime code (requires a fully created world):
- *     @example: USomeGameService& MyDependency = UseGameService<USomeGameService>(this);
- *     @example: TObjectPtr<USomeGameService> MyDependency = UseGameServiceAsPtr<USomeGameService>(this);
- *     @example: TWeakObjectPtr<USomeGameService> MyDependency = UseGameServiceAsWeakPtr<USomeGameService>(this);
- *     @example: TWeakObjectPtr<USomeOtherService> NiceToHaveService = FindOptionalGameService<USomeOtherService>();
- *     @note: Interfaced services use the interface version of storage pointers instead: @TScriptInterface, @TWeakInterfacePtr
- * - Access subsystem dependencies in your runtime code:
- *     @example: TWeakObjectPtr<USomeSubsystem> PotentiallyUnavailableSubsystem = FindSubsystemDependency<USomeSubsystem>(this);
- * - When relying on subsystems or async services whose initialization order might overlap with that of your class, use this:
- *     @example: WaitForDependencies(this, FOnWaitingFinished::CreateUObject(this, &ThisClass::ExecuteCodeRelyingOnAsyncDependencies));
- *
- * @remark Most functionalities require passing a ServiceUser @UObject ('this') in order to access UE framework functionalities.
+ * Configuration struct for a @FGameServiceUser derived classes.
+ * Example usage of ConfigureGameServiceUser() implementation:
+ *		return FGameServiceUserConfig(this)
+ *			.AddServiceDependency<USomeService>()
+ *			.AddServiceDependency<USomeOtherService>()
+ *			.AddSubsystemDependency<USomeSubsystem>();
+ *	Grand-child classes should consider calling Super::ConfigureGameServiceUser() to
+ *	inherit the dependency configured by their parents.
  */
-class WEEKENDGAMESERVICE_API FGameServiceUser
+struct WEEKENDGAMESERVICE_API FGameServiceUserConfig
 {
-public:
-	using FGameServiceClass = TSubclassOf<UObject>; // => see GameServiceBase.h
+	FGameServiceUserConfig(const UObject& GameServiceUserObject);
+	FGameServiceUserConfig(const UObject* GameServiceUserObject);
 
-	/** @returns all game service classes that this service user depends on. */
-	const TArray<FGameServiceClass>& GetServiceClassDependencies() const;
+	/** Utility function for chaining multiple ServiceDependencies.Add<T>() calls on the same config object. */
+	template <typename T> FGameServiceUserConfig& AddServiceDependency() { ServiceDependencies.Add<T>(); return *this; }
+	/** Utility function for chaining multiple SubsystemDependencies.Add<T>() calls on the same config object. */
+	template <typename T> FGameServiceUserConfig& AddSubsystemDependencies() { SubsystemDependencies.Add<T>(); return *this; }
+	/** Utility function for chaining multiple OptionalSubsystemDependencies.Add<T>() calls on the same config object. */
+	template <typename T> FGameServiceUserConfig& AddOptionalSubsystemDependencies() { OptionalSubsystemDependencies.Add<T>(); return *this; }
 
-	/** @returns all subsystem classes that this service user depends on. */
-	const TArray<TSubclassOf<USubsystem>>& GetSubsystemClassDependencies() const;
-
-	/** @returns all optional subsystem classes that this service user depends on. */
-	const TArray<TSubclassOf<USubsystem>>& GetOptionalSubsystemClassDependencies() const;
-
-	/** @returns whether all game service dependencies are running and all subsystem dependencies are available. */
-	bool AreAllDependenciesReady(const UObject* ServiceUser) const;
-	bool AreServiceDependenciesReady() const;
-	bool AreSubsystemDependenciesReady(const UObject* ServiceUser) const;
-
-protected:
-	FGameServiceUser() = default;
-	~FGameServiceUser() = default;
+	FORCEINLINE const UObject* GetUserObject() const { return UserObject.Get(); }
+	FORCEINLINE UWorld* GetWorld() const { return UserObject.IsValid() ? UserObject->GetWorld() : nullptr; }
 
 	/**
 	 * Dependency config container for game services. Call ServiceDependencies.Add<T>() in the constructor of inherited classes.
@@ -83,6 +63,62 @@ protected:
 	 */
 	FSubsystemDependencies OptionalSubsystemDependencies;
 
+private:
+	FGameServiceUserConfig() = delete;
+	TWeakObjectPtr<const UObject> UserObject = nullptr;
+};
+
+/**
+ * Grants classes inheriting from FGameServiceUser utilities to configure GameService and Subsystem dependencies
+ * and the possibility to directly access those dependencies in their runtime code.
+ *
+ * Intended usage:
+ * - Inherit your @UClass from @FGameServiceUser
+ * - Configure dependencies in your class constructor:
+ *     @example: ServiceDependencies.Add<USomeGameService>();
+ *     @example: SubsystemDependencies.Add<USomeSubsystem>();
+ * - Access services directly in your runtime code (requires a fully created world):
+ *     @example: USomeGameService& MyDependency = UseGameService<USomeGameService>();
+ *     @example: TObjectPtr<USomeGameService> MyDependency = UseGameServiceAsPtr<USomeGameService>();
+ *     @example: TWeakObjectPtr<USomeGameService> MyDependency = UseGameServiceAsWeakPtr<USomeGameService>();
+ *     @example: TWeakObjectPtr<USomeOtherService> NiceToHaveService = FindOptionalGameService<USomeOtherService>();
+ *     @note: Interfaced services use the interface version of storage pointers instead: @TScriptInterface, @TWeakInterfacePtr
+ * - Access subsystem dependencies in your runtime code:
+ *     @example: TWeakObjectPtr<USomeSubsystem> PotentiallyUnavailableSubsystem = FindSubsystemDependency<USomeSubsystem>();
+ * - When relying on subsystems or async services whose initialization order might overlap with that of your class, use this:
+ *     @example: WaitForDependencies(FOnWaitingFinished::CreateUObject(this, &ThisClass::ExecuteCodeRelyingOnAsyncDependencies));
+ *
+ * @remark Inheriting classes must implement @ConfigureGameServiceUser().
+ */
+class WEEKENDGAMESERVICE_API FGameServiceUser
+{
+public:
+	using FGameServiceClass = TSubclassOf<UObject>; // => see GameServiceBase.h
+
+	/** Must be overridden by derived class to configure ServiceDependencies and SubsystemDependencies. */
+	virtual FGameServiceUserConfig ConfigureGameServiceUser() const = 0;
+
+	/** Can be overridden by a derived class to throw exceptions for invalid dependencies. */
+	virtual void CheckGameServiceDependencies() const {}
+
+	/** @returns all game service classes that this service user depends on. */
+	TArray<FGameServiceClass> GetServiceClassDependencies() const;
+
+	/** @returns all subsystem classes that this service user depends on. */
+	TArray<TSubclassOf<USubsystem>> GetSubsystemClassDependencies() const;
+
+	/** @returns all optional subsystem classes that this service user depends on. */
+	TArray<TSubclassOf<USubsystem>> GetOptionalSubsystemClassDependencies() const;
+
+	/** @returns whether all game service dependencies are running and all subsystem dependencies are available. */
+	bool AreAllDependenciesReady() const;
+	bool AreServiceDependenciesReady() const;
+	bool AreSubsystemDependenciesReady() const;
+
+protected:
+	FGameServiceUser() = default;
+	~FGameServiceUser() = default;
+
 	/**
 	 * Defers given callback until all dependencies are ready to be used. Triggers callback immediately if that is already the case.
 	 * This is only necessary when depending on subsystems whose birth might be after the birth of the service user.
@@ -90,15 +126,15 @@ protected:
 	 * However, async services might take a while until they are considered 'running', even when they are started on demand.
 	 */
 	DECLARE_DELEGATE(FOnWaitingFinished)
-	void WaitForDependencies(const UObject* ServiceUser, FOnWaitingFinished Callback);
-	void WaitForDependencies(const UObject* ServiceUser, TFunction<void( )> Callback);
+	void WaitForDependencies(FOnWaitingFinished Callback);
+	void WaitForDependencies(TFunction<void( )> Callback);
 
 	/**
 	 * Only to be called by @UWorldSubsystem classes inheriting from @FGameServiceUser, in their @Initialize call before waiting for dependencies.
 	 * This makes sure the @WorldGameServiceRunner and all configured subsystem dependencies have already been initialized.
 	 */
 	template<typename ServiceUserClass, typename = typename TEnableIf<TIsDerivedFrom<ServiceUserClass, UWorldSubsystem>::IsDerived>::Type>
-	void InitializeWorldSubsystemDependencies(const ServiceUserClass* ServiceUser, FSubsystemCollectionBase& SubsystemCollection)
+	void InitializeWorldSubsystemDependencies(FSubsystemCollectionBase& SubsystemCollection)
 	{
 		InitializeWorldSubsystemDependencies_Internal(SubsystemCollection);
 	}
@@ -107,45 +143,45 @@ protected:
 	 * @returns another game service that is part of the ServiceDependencies config.
 	 * If the desired service is not yet created or running, it will be created and started on demand.
 	 */
-	UGameServiceBase& UseGameService(const UObject* ServiceUser, const FGameServiceClass& ServiceClass) const;
+	UGameServiceBase& UseGameService(const FGameServiceClass& ServiceClass) const;
 
 	/** @returns another game service as weak pointer, even when not configured as dependency, considering it might not be available. */
 	TWeakObjectPtr<UGameServiceBase> FindOptionalGameService(const FGameServiceClass& ServiceClass) const;
 
 	/** @returns a subsystem that was configured as dependency as weak pointer, considering it might not yet be available. */
-	TWeakObjectPtr<USubsystem> FindSubsystemDependency(const UObject* ServiceUser, const TSubclassOf<USubsystem>& SubsystemClass) const;
+	TWeakObjectPtr<USubsystem> FindSubsystemDependency(const TSubclassOf<USubsystem>& SubsystemClass) const;
 
 	/** @returns whether a certain game service class is currently registered. */
 	bool IsGameServiceRegistered(const FGameServiceClass& ServiceClass) const;
 
 	template<typename T> typename TEnableIf<TIsDerivedFrom<T, UGameServiceBase>::IsDerived, T&>::Type
-	/*(T&)*/ UseGameService(const UObject* ServiceUser) const
+	/*(T&)*/ UseGameService() const
 	{
-		return *Cast<T>(UseGameService_Internal(ServiceUser, T::StaticClass()));
+		return *Cast<T>(UseGameService_Internal(T::StaticClass()));
 	}
 
 	template<typename T> typename TEnableIf<TIsDerivedFrom<T, UGameServiceBase>::IsDerived, TObjectPtr<T>>::Type
-	/*(TObjectPtr<T>)*/ UseGameServiceAsPtr(const UObject* ServiceUser) const
+	/*(TObjectPtr<T>)*/ UseGameServiceAsPtr() const
 	{
-		return TObjectPtr<T>(Cast<T>(UseGameService_Internal(ServiceUser, T::StaticClass())));
+		return TObjectPtr<T>(Cast<T>(UseGameService_Internal(T::StaticClass())));
 	}
 
 	template<typename T> typename TEnableIf<TIsIInterface<T>::Value, TScriptInterface<T>>::Type
-	/*(TScriptInterface<T>)*/ UseGameServiceAsPtr(const UObject* ServiceUser) const
+	/*(TScriptInterface<T>)*/ UseGameServiceAsInterface() const
 	{
-		return TScriptInterface<T>(UseGameService_Internal(ServiceUser, T::UClassType::StaticClass()));
+		return TScriptInterface<T>(UseGameService_Internal(T::UClassType::StaticClass()));
 	}
 
 	template<typename T> typename TEnableIf<TIsDerivedFrom<T, UGameServiceBase>::IsDerived, TWeakObjectPtr<T>>::Type
-	/*(TWeakObjectPtr<T>)*/ UseGameServiceAsWeakPtr(const UObject* ServiceUser) const
+	/*(TWeakObjectPtr<T>)*/ UseGameServiceAsWeakPtr() const
 	{
-		return TWeakObjectPtr<T>(Cast<T>(UseGameService_Internal(ServiceUser, T::StaticClass())));
+		return TWeakObjectPtr<T>(Cast<T>(UseGameService_Internal(T::StaticClass())));
 	}
 
 	template<typename T> typename TEnableIf<TIsIInterface<T>::Value, TWeakInterfacePtr<T>>::Type
-	/*(TWeakInterfacePtr<T>)*/ UseGameServiceAsWeakPtr(const UObject* ServiceUser) const
+	/*(TWeakInterfacePtr<T>)*/ UseGameServiceAsWeakInterface() const
 	{
-		return TWeakInterfacePtr<T>(UseGameService_Internal(ServiceUser, T::UClassType::StaticClass()));
+		return TWeakInterfacePtr<T>(UseGameService_Internal(T::UClassType::StaticClass()));
 	}
 
 	template<typename T> typename TEnableIf<TIsDerivedFrom<T, UGameServiceBase>::IsDerived, TWeakObjectPtr<T>>::Type
@@ -161,10 +197,10 @@ protected:
 	}
 
 	template<typename T>
-	TWeakObjectPtr<T> FindSubsystemDependency(const UObject* ServiceUser) const
+	TWeakObjectPtr<T> FindSubsystemDependency() const
 	{
 		static_assert(TIsDerivedFrom<T, USubsystem>::IsDerived);
-		return TWeakObjectPtr<T>(Cast<T>(FindSubsystemDependency(ServiceUser, T::StaticClass())));
+		return TWeakObjectPtr<T>(Cast<T>(FindSubsystemDependency(T::StaticClass())));
 	}
 
 	template<typename T>
@@ -173,20 +209,24 @@ protected:
 		return IsGameServiceRegistered(GameService::GetServiceUClass<T>());
 	}
 
-	/** When waiting for dependencies, this is called automatically each tick, but can also called manually by derived class. */
-	void PollPendingDependencyWaitCallbacks(const UObject* ServiceUser);
+	/** When waiting for dependencies, this is called automatically each tick, but can also be called manually by derived class. */
+	void PollPendingDependencyWaitCallbacks();
 
-	/** When waiting for dependencies, this can be called when the wait should be cancelled, i.e. when the service user is prematurely destroyed. */
-	void StopWaitingForDependencies(const UObject* ServiceUser);
+	/** When waiting for dependencies, this can be called when the wait should be canceled, i.e. when the service user is prematurely destroyed. */
+	void StopWaitingForDependencies();
 
-	/** Can be overridden by a derived class to throw exceptions for invalid dependencies. */
-	virtual void CheckGameServiceDependencies() const {}
+	/** Clears the cache of dependency instances. Should be called when the service user re-configures dependencies at runtime. */
+	void InvalidateCachedDependencies() const;
 
 private:
-	TArray<FOnWaitingFinished> PendingDependencyWaitCallbacks;
+	TArray<FOnWaitingFinished> PendingDependencyWaitCallbacks = {};
+	TOptional<FTimerHandle> PendingDependencyWaitTimerHandle = {};
+
+	mutable TMap<FGameServiceClass, TWeakObjectPtr<UGameServiceBase>> CachedServiceDependencies = {};
+	mutable TMap<TSubclassOf<USubsystem>, TWeakObjectPtr<USubsystem>> CachedSubsystemDependencies = {};
 
 	// - Internal calls for templates using only UObject, so the child class does not have to include "GameServiceBase.h" when templates are inlined
-	UObject* UseGameService_Internal(const UObject* ServiceUser, const TSubclassOf<UObject>& ServiceClass) const;
+	UObject* UseGameService_Internal(const TSubclassOf<UObject>& ServiceClass) const;
 	UObject* FindOptionalGameService_Internal(const FGameServiceClass& ServiceClass) const;
 	void InitializeWorldSubsystemDependencies_Internal(FSubsystemCollectionBase& SubsystemCollection);
 	// --

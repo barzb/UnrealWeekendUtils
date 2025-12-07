@@ -12,6 +12,7 @@
 #include "AutomationTest/AutomationSpecMacros.h"
 #include "AutomationTest/AutomationTestWorld.h"
 #include "GameService/GameServiceManager.h"
+#include "GameService/WorldGameServiceRunner.h"
 #include "GameService/Mocks/GameServiceMocks.h"
 
 #define SPEC_TEST_CATEGORY "WeekendUtils.GameService"
@@ -20,7 +21,7 @@ using namespace WeekendUtils;
 using namespace Mocks;
 
 /**
- * @UWorldGameServiceRunner is not accessible outside the WeekendUtils module,
+ * @UWorldGameServiceRunner members are not accessible outside the WeekendUtils module,
  * but some of its inner workings can still be verified via tests.
  */
 WE_BEGIN_DEFINE_SPEC(WorldGameServiceRunner)
@@ -40,12 +41,8 @@ WE_END_DEFINE_SPEC(WorldGameServiceRunner)
 		TestWorld = MakeShared<FScopedAutomationTestWorld>(SpecTestWorldName);
 		TestWorld->InitializeGame();
 
-		// This is a bit hacky, but because the UWorldGameServiceRunner type info is private in its source module, we'll find it by name:
-		TArray<UTickableWorldSubsystem*> WorldSubsystems = TestWorld->AsRef().GetSubsystemArrayCopy<UTickableWorldSubsystem>();
-		auto** Finder = WorldSubsystems.FindByPredicate([](UTickableWorldSubsystem* Subsystem) {
-			return (Subsystem->GetName().Contains("WorldGameServiceRunner"));
-		});
-		WorldGameServiceRunner = (ensure(Finder != nullptr) ? *Finder : nullptr);
+		WorldGameServiceRunner = TestWorld->AsRef().GetSubsystem<UWorldGameServiceRunner>();
+		ensure(WorldGameServiceRunner);
 	});
 
 	AfterEach([this]
@@ -56,7 +53,7 @@ WE_END_DEFINE_SPEC(WorldGameServiceRunner)
 	{
 		It("should call TickService() on all running services that are tickable.", [this]
 		{
-			UGameServiceManager& ServiceManager = UGameServiceManager::Get();
+			UGameServiceManager& ServiceManager = UGameServiceManager::SummonInstance(TestWorld->AsPtr());
 			const UVoidService& NonTickableService = ServiceManager.StartService<UVoidService>(TestWorld->AsRef());
 			UVoidObserverService& TickableService  = ServiceManager.StartService<UVoidObserverService>(TestWorld->AsRef());
 			TickableService.bIsTickable = true;
@@ -79,28 +76,30 @@ WE_END_DEFINE_SPEC(WorldGameServiceRunner)
 	{
 		It("should shutdown all running GameServices with EGameServiceLifetime::ShutdownWithWorld.", [this]
 		{
-			UGameServiceManager& ServiceManager = UGameServiceManager::Get();
+			UGameServiceManager& ServiceManager = UGameServiceManager::SummonInstance(TestWorld->AsPtr());
 			UVoidService& WorldService  = *NewObject<UVoidService>(TestWorld->GameInstance);
 			WorldService.Lifetime = EGameServiceLifetime::ShutdownWithWorld;
 			ServiceManager.StartService<UVoidService>(TestWorld->AsRef(), WorldService);
 
 			TestWorld.Reset(); // Destroys world and calls Deinitialize on subsystem.
 			TestTrue("WorldService.bWasShutDown ", WorldService.bWasShutDown);
-			WorldService.MarkAsGarbage();
 		});
 
 		It("should NOT shutdown any running GameServices with EGameServiceLifetime::ShutdownWithGameInstance.", [this]
 		{
-			UGameServiceManager& ServiceManager = UGameServiceManager::Get();
+			UGameServiceManager& ServiceManager = UGameServiceManager::SummonInstance(TestWorld->AsPtr());
 			UVoidService& GameInstanceService  = *NewObject<UVoidService>(TestWorld->GameInstance);
 			GameInstanceService.Lifetime = EGameServiceLifetime::ShutdownWithGameInstance;
 			ServiceManager.StartService<UVoidService>(TestWorld->AsRef(), GameInstanceService);
 
+			AddExpectedError("RegisterComponentWithWorld"); // See: APlayerController::UpdateStateInputComponents.
+			AddExpectedError("missing call to EndPlay"); // World does not EndPlay and we expect that.
 			TestWorld->World->CleanupWorld(); // Calls Deinitialize on world subsystem, but not GameInstance subsystems.
+
 			TestFalse("GameInstanceService.bWasShutDown ", GameInstanceService.bWasShutDown);
-			AddExpectedError("CleanupWorld called twice");
+
+			AddExpectedError("CleanupWorld called twice"); // World is cleaned up again when TestWorld.Reset().
 			TestWorld.Reset();
-			GameInstanceService.MarkAsGarbage();
 		});
 	});
 }

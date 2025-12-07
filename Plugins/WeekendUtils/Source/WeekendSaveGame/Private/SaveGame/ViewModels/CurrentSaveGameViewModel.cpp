@@ -11,14 +11,15 @@
 
 #include "SaveGame/SaveGameService.h"
 
-UCurrentSaveGameViewModel::UCurrentSaveGameViewModel()
+FGameServiceUserConfig UCurrentSaveGameViewModel::ConfigureGameServiceUser() const
 {
-	ServiceDependencies.Add<USaveGameService>();
+	return FGameServiceUserConfig(this)
+		.AddServiceDependency<USaveGameService>();
 }
 
 void UCurrentSaveGameViewModel::BeginUsage()
 {
-	SaveGameService = UseGameServiceAsPtr<USaveGameService>(this);
+	SaveGameService = UseGameServiceAsPtr<USaveGameService>();
 	SaveGameService->OnAfterRestored.AddUObject(this, &ThisClass::UpdateForCurrentSaveGame);
 	SaveGameService->OnAvailableSaveGamesChanged.AddUObject(this, &ThisClass::UpdateTimeSinceLastSave);
 
@@ -29,13 +30,13 @@ void UCurrentSaveGameViewModel::ContinueSaveGame()
 {
 	if (bCanContinue)
 	{
-		UseGameService<USaveGameService>(this).TryTravelIntoCurrentSaveGame();
+		UseGameService<USaveGameService>().TryTravelIntoCurrentSaveGame();
 	}
 }
 
 void UCurrentSaveGameViewModel::CreateNewGame()
 {
-	UseGameService<USaveGameService>(this).CreateAndRestoreNewSaveGameAsCurrent();
+	UseGameService<USaveGameService>().CreateAndRestoreNewSaveGameAsCurrent();
 }
 
 FTimespan UCurrentSaveGameViewModel::GetTimespanSinceLastSave() const

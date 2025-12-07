@@ -33,7 +33,7 @@ WE_END_DEFINE_SPEC(GameServiceUser)
 		TestWorld = MakeShared<FScopedAutomationTestWorld>(SpecTestWorldName);
 		TestWorld->InitializeGame();
 
-		UGameServiceManager::Get().ClearServiceRegister(EGameServiceLifetime::ShutdownWithWorld);
+		UGameServiceManager::SummonInstance(TestWorld->AsPtr()).ClearServiceRegister(EGameServiceLifetime::ShutdownWithWorld);
 		UGameServiceConfig::CreateForWorld(TestWorld->AsRef(), [](UGameServiceConfig& Config)
 		{
 			Config.SetPriority(100);
@@ -47,7 +47,7 @@ WE_END_DEFINE_SPEC(GameServiceUser)
 
 	AfterEach([this]
 	{
-		ServiceUser->StopWaitingForDependencies(ServiceUser);
+		ServiceUser->StopWaitingForDependencies();
 		ServiceUser = nullptr;
 		TestWorld.Reset();
 	});
@@ -57,7 +57,7 @@ WE_END_DEFINE_SPEC(GameServiceUser)
 		It("should make sure the used service was started before returning it", [this]
 		{
 			ServiceUser->ServiceDependencies.Add<UVoidService>();
-			const UVoidService& Service = ServiceUser->UseGameService<UVoidService>(ServiceUser.Get());
+			const UVoidService& Service = ServiceUser->UseGameService<UVoidService>();
 			TestTrue("Service.bWasStarted", Service.bWasStarted);
 		});
 	});
@@ -67,11 +67,12 @@ WE_END_DEFINE_SPEC(GameServiceUser)
 		It("should return a valid pointer", [this]
 		{
 			ServiceUser->ServiceDependencies.Add<UVoidService>();
-			const TObjectPtr<UVoidService> ObjectService = ServiceUser->UseGameServiceAsPtr<UVoidService>(ServiceUser.Get());
+			ServiceUser->ServiceDependencies.Add<IMockGameServiceInterface>();
+
+			const TObjectPtr<UVoidService> ObjectService = ServiceUser->UseGameServiceAsPtr<UVoidService>();
 			TestTrue("IsValid(ObjectService)", IsValid(ObjectService.Get()));
 
-			ServiceUser->ServiceDependencies.Add<IMockGameServiceInterface>();
-			const TScriptInterface<IMockGameServiceInterface> InterfaceService = ServiceUser->UseGameServiceAsPtr<IMockGameServiceInterface>(ServiceUser.Get());
+			const TScriptInterface<IMockGameServiceInterface> InterfaceService = ServiceUser->UseGameServiceAsInterface<IMockGameServiceInterface>();
 			TestTrue("IsValid(InterfaceService)", IsValid(InterfaceService.GetObject()));
 		});
 	});
@@ -81,10 +82,11 @@ WE_END_DEFINE_SPEC(GameServiceUser)
 		It("should return nullptr when the used service wasn't started before", [this]
 		{
 			ServiceUser->ServiceDependencies.Add<UVoidService>();
+			ServiceUser->ServiceDependencies.Add<IMockGameServiceInterface>();
+
 			const TWeakObjectPtr<UVoidService> OptionalObjectService = ServiceUser->FindOptionalGameService<UVoidService>();
 			TestFalse("IsValid(OptionalObjectService)", OptionalObjectService.IsValid());
 
-			ServiceUser->ServiceDependencies.Add<IMockGameServiceInterface>();
 			const TWeakInterfacePtr<IMockGameServiceInterface> OptionalInterfaceService = ServiceUser->FindOptionalGameService<IMockGameServiceInterface>();
 			TestFalse("IsValid(OptionalInterfaceService)", OptionalInterfaceService.IsValid());
 		});
@@ -92,12 +94,13 @@ WE_END_DEFINE_SPEC(GameServiceUser)
 		It("should return a valid pointer to the existing service if service was already started", [this]
 		{
 			ServiceUser->ServiceDependencies.Add<UVoidService>();
-			ServiceUser->UseGameService<UVoidService>(ServiceUser); // Starts the service.
+			ServiceUser->ServiceDependencies.Add<IMockGameServiceInterface>();
+
+			ServiceUser->UseGameService<UVoidService>(); // Starts the service.
 			const TWeakObjectPtr<UVoidService> OptionalObjectService = ServiceUser->FindOptionalGameService<UVoidService>();
 			TestTrue("IsValid(OptionalObjectService)", IsValid(OptionalObjectService.Get()));
 
-			ServiceUser->ServiceDependencies.Add<IMockGameServiceInterface>();
-			ServiceUser->UseGameServiceAsPtr<IMockGameServiceInterface>(ServiceUser); // Starts the service.
+			ServiceUser->UseGameServiceAsInterface<IMockGameServiceInterface>(); // Starts the service.
 			const TWeakInterfacePtr<IMockGameServiceInterface> OptionalInterfaceService = ServiceUser->FindOptionalGameService<IMockGameServiceInterface>();
 			TestTrue("IsValid(OptionalInterfaceService)", OptionalInterfaceService.IsValid());
 		});
@@ -108,28 +111,28 @@ WE_END_DEFINE_SPEC(GameServiceUser)
 		It("should be able to find a UEngineSubsystem", [this]
 		{
 			ServiceUser->SubsystemDependencies.Add<UEngineSubsystemMock>();
-			const TWeakObjectPtr<UEngineSubsystemMock> EngineSubsystem = ServiceUser->FindSubsystemDependency<UEngineSubsystemMock>(ServiceUser);
+			const TWeakObjectPtr<UEngineSubsystemMock> EngineSubsystem = ServiceUser->FindSubsystemDependency<UEngineSubsystemMock>();
 			TestTrue("IsValid(EngineSubsystem)", EngineSubsystem.IsValid());
 		});
 
 		It("should be able to find a UWorldSubsystem", [this]
 		{
 			ServiceUser->SubsystemDependencies.Add<UWorldSubsystemMock>();
-			const TWeakObjectPtr<UWorldSubsystemMock> WorldSubsystem = ServiceUser->FindSubsystemDependency<UWorldSubsystemMock>(ServiceUser);
+			const TWeakObjectPtr<UWorldSubsystemMock> WorldSubsystem = ServiceUser->FindSubsystemDependency<UWorldSubsystemMock>();
 			TestTrue("IsValid(WorldSubsystem)", WorldSubsystem.IsValid());
 		});
 
 		It("should be able to find a UGameInstanceSubsystem", [this]
 		{
 			ServiceUser->SubsystemDependencies.Add<UGameInstanceSubsystemMock>();
-			const TWeakObjectPtr<UGameInstanceSubsystemMock> GameInstanceSubsystem = ServiceUser->FindSubsystemDependency<UGameInstanceSubsystemMock>(ServiceUser);
+			const TWeakObjectPtr<UGameInstanceSubsystemMock> GameInstanceSubsystem = ServiceUser->FindSubsystemDependency<UGameInstanceSubsystemMock>();
 			TestTrue("IsValid(GameInstanceSubsystem)", GameInstanceSubsystem.IsValid());
 		});
 
 		It("should be able to find a ULocalPlayerSubsystem", [this]
 		{
 			ServiceUser->SubsystemDependencies.Add<ULocalPlayerSubsystemMock>();
-			const TWeakObjectPtr<ULocalPlayerSubsystemMock> LocalPlayerSubsystem = ServiceUser->FindSubsystemDependency<ULocalPlayerSubsystemMock>(ServiceUser);
+			const TWeakObjectPtr<ULocalPlayerSubsystemMock> LocalPlayerSubsystem = ServiceUser->FindSubsystemDependency<ULocalPlayerSubsystemMock>();
 			TestTrue("IsValid(LocalPlayerSubsystem)", LocalPlayerSubsystem.IsValid());
 		});
 	});
@@ -139,10 +142,10 @@ WE_END_DEFINE_SPEC(GameServiceUser)
 		It("should immediately execute the callback when all dependencies are already running", [this]
 		{
 			ServiceUser->ServiceDependencies.Add<UVoidService>();
-			ServiceUser->UseGameService<UVoidService>(ServiceUser.Get()); // Starts the service.
+			ServiceUser->UseGameService<UVoidService>(); // Starts the service.
 
 			bool bWasCallbackExecuted = false;
-			ServiceUser->WaitForDependencies(ServiceUser, UGameServiceUserMock::FOnWaitingFinished::CreateLambda([this, &bWasCallbackExecuted]
+			ServiceUser->WaitForDependencies(UGameServiceUserMock::FOnWaitingFinished::CreateLambda([this, &bWasCallbackExecuted]
 			{
 				bWasCallbackExecuted = true;
 				const TWeakObjectPtr<UVoidService> DependencyService = ServiceUser->FindOptionalGameService<UVoidService>();
@@ -157,7 +160,7 @@ WE_END_DEFINE_SPEC(GameServiceUser)
 			ServiceUser->ServiceDependencies.Add<UVoidService>(); // Started automatically.
 
 			bool bWasCallbackExecuted = false;
-			ServiceUser->WaitForDependencies(ServiceUser, UGameServiceUserMock::FOnWaitingFinished::CreateLambda([this, &bWasCallbackExecuted]
+			ServiceUser->WaitForDependencies(UGameServiceUserMock::FOnWaitingFinished::CreateLambda([this, &bWasCallbackExecuted]
 			{
 				bWasCallbackExecuted = true;
 			}));
@@ -171,7 +174,7 @@ WE_END_DEFINE_SPEC(GameServiceUser)
 			ServiceUser->SubsystemDependencies.Add<UWorldSubsystem>(); // Abstract class can never be created.
 
 			bool bWasCallbackExecuted = false;
-			ServiceUser->WaitForDependencies(ServiceUser, UGameServiceUserMock::FOnWaitingFinished::CreateLambda([this, &bWasCallbackExecuted]
+			ServiceUser->WaitForDependencies(UGameServiceUserMock::FOnWaitingFinished::CreateLambda([this, &bWasCallbackExecuted]
 			{
 				bWasCallbackExecuted = true;
 			}));
@@ -185,7 +188,7 @@ WE_END_DEFINE_SPEC(GameServiceUser)
 			ServiceUser->SubsystemDependencies.Add<UWorldSubsystem>(); // Abstract class can never be created.
 
 			bool bWasCallbackExecuted = false;
-			ServiceUser->WaitForDependencies(ServiceUser, UGameServiceUserMock::FOnWaitingFinished::CreateLambda([this, &bWasCallbackExecuted]
+			ServiceUser->WaitForDependencies(UGameServiceUserMock::FOnWaitingFinished::CreateLambda([this, &bWasCallbackExecuted]
 			{
 				bWasCallbackExecuted = true;
 				const TWeakObjectPtr<UVoidService> DependencyService = ServiceUser->FindOptionalGameService<UVoidService>();

@@ -38,10 +38,10 @@ public:
 	/// MODULES
 
 	/** @returns the CurrentSaveGame of the @USaveGameService as ModularSaveGame - or nullptr. */
-	static const UModularSaveGame* GetCurrent();
+	static const UModularSaveGame* FindCurrent(const UObject* WorldContext);
 
 	/** @returns the CurrentSaveGame of the @USaveGameService as ModularSaveGame - or nullptr. */
-	static UModularSaveGame* GetMutableCurrent();
+	static UModularSaveGame* FindMutableCurrent(const UObject* WorldContext);
 
 	/**
 	 * @returns requested module instance for the summoner, either from the current ModularSaveGame
@@ -134,7 +134,7 @@ template <typename T>
 T& UModularSaveGame::SummonModule(UObject& Summoner, const TSubclassOf<T>& ModuleClass)
 {
 	static_assert(TIsDerivedFrom<T, USaveGameModule>::IsDerived, "Type is not derived from USaveGameModule.");
-	UModularSaveGame* SaveGame = GetMutableCurrent();
+	UModularSaveGame* SaveGame = FindMutableCurrent(&Summoner);
 	return (IsValid(SaveGame) ? SaveGame->FindOrAddModule<T>(ModuleClass) : *NewObject<T>(&Summoner, ModuleClass));
 }
 
@@ -142,7 +142,7 @@ template <typename T>
 T& UModularSaveGame::SummonModule(UObject& Summoner, const FName& ModuleName, const TSubclassOf<T>& ModuleClass)
 {
 	static_assert(TIsDerivedFrom<T, USaveGameModule>::IsDerived, "Type is not derived from USaveGameModule.");
-	UModularSaveGame* SaveGame = GetMutableCurrent();
+	UModularSaveGame* SaveGame = FindMutableCurrent(&Summoner);
 	return (IsValid(SaveGame) ? SaveGame->FindOrAddModule<T>(ModuleClass, ModuleName) : *NewObject<T>(&Summoner, ModuleClass));
 }
 

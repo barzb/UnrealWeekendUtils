@@ -15,9 +15,10 @@
 #include "SaveGame/ViewModels/SaveGameSlotViewModel.h"
 #include "Utils/ObjectListSynchronizer.h"
 
-USaveGameListViewModel::USaveGameListViewModel()
+FGameServiceUserConfig USaveGameListViewModel::ConfigureGameServiceUser() const
 {
-	ServiceDependencies.Add<USaveGameService>();
+	return FGameServiceUserConfig(this)
+		.AddServiceDependency<USaveGameService>();
 }
 
 void USaveGameListViewModel::BeginUsage(TSubclassOf<USaveGameSlotViewModel> SlotClass)
@@ -25,7 +26,7 @@ void USaveGameListViewModel::BeginUsage(TSubclassOf<USaveGameSlotViewModel> Slot
 	SlotViewModelClass = SlotClass;
 	check(SlotViewModelClass);
 
-	SaveGameService = UseGameServiceAsWeakPtr<USaveGameService>(this);
+	SaveGameService = UseGameServiceAsWeakPtr<USaveGameService>();
 	SaveGameService->OnAvailableSaveGamesChanged.AddUObject(this, &ThisClass::Update);
 
 	Update();

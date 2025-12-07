@@ -12,7 +12,7 @@
 #include "CoreMinimal.h"
 #include "GameService/GameServiceBase.h"
 #include "GameService/GameServiceUtils.h"
-#include "Subsystems/EngineSubsystem.h"
+#include "Subsystems/GameInstanceSubsystem.h"
 
 #include "GameServiceManager.generated.h"
 
@@ -24,7 +24,7 @@ class UGameServiceConfig;
  * while ensuring that dependencies of started services are started first, so services can always access their dependent
  * services without valid checking them.
  *
- * Although this managers lifetime exceeds the lifetime of a @UWorld, the lifetime of created services is always bound to
+ * Although this managers lifetime exceeds the lifetime of an @UWorld, the lifetime of created services is always bound to
  * that of the world they have been started in. This requires a cooperation with @UWorldGameServiceRunner.
  *
  * See @UGameServiceConfig for how to register service classes manually and @UGameModeServiceConfigBase to automatically
@@ -39,16 +39,16 @@ class UGameServiceConfig;
  * instead of accessing the service manager directly.
  */
 UCLASS()
-class WEEKENDGAMESERVICE_API UGameServiceManager : public UEngineSubsystem
+class WEEKENDGAMESERVICE_API UGameServiceManager : public UObject
 {
 	GENERATED_BODY()
 
 public:
-	/** @returns the singleton GameServiceManager, which is valid as long as the @UEngine is available. */
-	FORCEINLINE static UGameServiceManager& Get() { return *GEngine->GetEngineSubsystem<UGameServiceManager>(); }
+	/** @returns the singleton GameServiceManager, bound to the lifetime of an @UGameInstance. Creates the instance on-demand. */
+	static UGameServiceManager& SummonInstance(const UObject* WorldContextObject);
 
-	/** @returns the singleton GameServiceManager, which is valid as long as the @UEngine is available. */
-	FORCEINLINE static UGameServiceManager* GetPtr() { return GEngine ? GEngine->GetEngineSubsystem<UGameServiceManager>() : nullptr; }
+	/** @returns the singleton GameServiceManager, bound to the lifetime of an @UGameInstance - or nullptr. */
+	static UGameServiceManager* FindInstance(const UObject* WorldContextObject);
 
 	UGameServiceManager();
 
@@ -158,6 +158,9 @@ public:
 
 	/** Clears all service configurations that were registered for a certain service lifetime. */
 	void ClearServiceRegister(const EGameServiceLifetime& Lifetime);
+
+	/** Shuts down and unregisters ALL services and terminates this manager intance. */
+	void Terminate();
 
 private:
 	struct FServiceClassRegistryEntry

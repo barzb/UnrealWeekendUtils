@@ -11,13 +11,13 @@
 
 #include "WeekendGameService.h"
 #include "GameService/GameServiceManager.h"
-#include "Initialization/WorldGameServiceRunner.h"
+#include "GameService/WorldGameServiceRunner.h"
 
-UGameServiceConfig& UGameServiceConfig::CreateForWorld(UWorld& World, TFunction<void(UGameServiceConfig&)> ConfigExec)
+UGameServiceConfig& UGameServiceConfig::CreateForWorld(const UWorld& World, TFunction<void(UGameServiceConfig&)> ConfigExec)
 {
-	UGameServiceConfig* NewConfig = NewObject<UGameServiceConfig>(&World);
+	UGameServiceConfig* NewConfig = NewObject<UGameServiceConfig>(World.GetGameInstance());
 	ConfigExec(*NewConfig);
-	NewConfig->RegisterWithGameServiceManager();
+	NewConfig->RegisterWithGameServiceManager(World);
 	return *NewConfig;
 }
 
@@ -29,10 +29,10 @@ UGameServiceConfig& UGameServiceConfig::CreateForNextWorld(TFunction<void(UGameS
 	return *NewConfig;
 }
 
-void UGameServiceConfig::RegisterWithGameServiceManager() const
+void UGameServiceConfig::RegisterWithGameServiceManager(const UWorld& World) const
 {
 	UE_LOG(LogGameService, Verbose, TEXT("Registering GameServiceConfig (%s) with GameServiceManager"), *GetName());
-	UGameServiceManager::Get().RegisterServices(*this);
+	UGameServiceManager::SummonInstance(&World).RegisterServices(*this);
 }
 
 void UGameServiceConfig::ValidateDependenciesForConfiguredServices() const

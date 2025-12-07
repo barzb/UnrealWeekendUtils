@@ -12,14 +12,15 @@
 #include "Containers/Ticker.h"
 #include "SaveGame/SaveGameService.h"
 
-USaveLoadMarkerViewModel::USaveLoadMarkerViewModel()
+FGameServiceUserConfig USaveLoadMarkerViewModel::ConfigureGameServiceUser() const
 {
-	ServiceDependencies.Add<USaveGameService>();
+	return FGameServiceUserConfig(this)
+		.AddServiceDependency<USaveGameService>();
 }
 
 void USaveLoadMarkerViewModel::BeginUsage()
 {
-	SaveGameService = UseGameServiceAsWeakPtr<USaveGameService>(this);
+	SaveGameService = UseGameServiceAsWeakPtr<USaveGameService>();
 	SaveGameService->OnStatusChanged.AddUObject(this, &ThisClass::UpdateForStatus);
 	UpdateForStatus(SaveGameService->GetCurrentStatus());
 }

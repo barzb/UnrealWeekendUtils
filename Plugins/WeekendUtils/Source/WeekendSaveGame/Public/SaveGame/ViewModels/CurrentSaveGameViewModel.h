@@ -29,8 +29,6 @@ class WEEKENDSAVEGAME_API UCurrentSaveGameViewModel : public UMVVMViewModelBase,
 	GENERATED_BODY()
 
 public:
-	UCurrentSaveGameViewModel();
-
 	UPROPERTY(FieldNotify, BlueprintReadOnly, Category = "Weekend Utils|Save Game")
 	bool bCanContinue = false;
 
@@ -58,6 +56,8 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure = False, Category = "Weekend Utils|Save Game", meta = (ExpandEnumAsExecs = "ReturnValue"))
 	ECommonAvailability GetTimeSinceLastSave(int32& OutHours, int32& OutMinutes, int32& OutSeconds) const;
 
+	// - FGameServiceUser
+	virtual FGameServiceUserConfig ConfigureGameServiceUser() const override;
 	// - UObject
 	virtual void BeginDestroy() override;
 	// --

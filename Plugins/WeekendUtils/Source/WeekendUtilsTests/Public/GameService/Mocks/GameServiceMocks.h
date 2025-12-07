@@ -76,10 +76,12 @@ class WEEKENDUTILSTESTS_API UMockGameService_VoidObserver : public UMockGameServ
 	GENERATED_BODY()
 
 public:
-	UMockGameService_VoidObserver()
+	// - FGameServiceUser
+	virtual FGameServiceUserConfig ConfigureGameServiceUser() const override
 	{
-		ServiceDependencies.Add<UMockGameService_Void>();
+		return FGameServiceUserConfig(this).AddServiceDependency<UMockGameService_Void>();
 	}
+	// --
 };
 
 UCLASS(Hidden, ClassGroup=Tests)
@@ -88,10 +90,12 @@ class WEEKENDUTILSTESTS_API UMockGameService_VoidObserverAssistant : public UMoc
 	GENERATED_BODY()
 
 public:
-	UMockGameService_VoidObserverAssistant()
+	// - FGameServiceUser
+	virtual FGameServiceUserConfig ConfigureGameServiceUser() const override
 	{
-		ServiceDependencies.Add<UMockGameService_VoidObserver>();
+		return FGameServiceUserConfig(this).AddServiceDependency<UMockGameService_VoidObserver>();
 	}
+	// --
 };
 
 UCLASS(Hidden, ClassGroup=Tests)
@@ -100,10 +104,12 @@ class WEEKENDUTILSTESTS_API UMockGameService_VoidObserverFan : public UMockGameS
 	GENERATED_BODY()
 
 public:
-	UMockGameService_VoidObserverFan()
+	// - FGameServiceUser
+	virtual FGameServiceUserConfig ConfigureGameServiceUser() const override
 	{
-		ServiceDependencies.Add<UMockGameService_VoidObserver>();
+		return FGameServiceUserConfig(this).AddServiceDependency<UMockGameService_VoidObserver>();
 	}
+	// --
 };
 
 //////////////////////////////////////////////////////////////////////

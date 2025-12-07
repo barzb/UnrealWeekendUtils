@@ -35,7 +35,7 @@ bool UExecuteCheatFromSaveGameSubsystem::ShouldCreateSubsystem(UObject* Outer) c
 	if (!Super::ShouldCreateSubsystem(Outer))
 		return false;
 
-	const auto& SaveGameService = UGameServiceLocator::FindServiceAsWeakPtr<USaveGameService>();
+	const auto& SaveGameService = UGameServiceLocator::FindServiceAsWeakPtr<USaveGameService>(Outer);
 	if (!SaveGameService.IsValid())
 		return false;
 
@@ -48,7 +48,7 @@ void UExecuteCheatFromSaveGameSubsystem::Initialize(FSubsystemCollectionBase& Co
 {
 	Super::Initialize(Collection);
 
-	const auto& SaveGameService = UGameServiceLocator::FindServiceAsWeakPtr<USaveGameService>();
+	const auto& SaveGameService = UGameServiceLocator::FindServiceAsWeakPtr<USaveGameService>(this);
 	const UModularSaveGame* ModularSaveGame = SaveGameService->GetCurrentSaveGame().GetPtr<UModularSaveGame>();
 	const USaveGameModule_Cheats* CheatsModule = ModularSaveGame->FindModule<USaveGameModule_Cheats>();
 	for (const FString& CheatCommand : CheatsModule->CheatsToExecuteAfterTravel)

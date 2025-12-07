@@ -24,19 +24,36 @@ class WEEKENDUTILSTESTS_API UGameServiceUserMock : public UObject, public FGameS
 	GENERATED_BODY()
 
 public:
-	using FGameServiceUser::ServiceDependencies;
-	using FGameServiceUser::SubsystemDependencies;
-
 	DECLARE_DELEGATE(FOnWaitingFinished)
 	using FGameServiceUser::WaitForDependencies;
 	using FGameServiceUser::UseGameService;
 	using FGameServiceUser::UseGameServiceAsPtr;
+	using FGameServiceUser::UseGameServiceAsInterface;
 	using FGameServiceUser::FindOptionalGameService;
 	using FGameServiceUser::FindSubsystemDependency;
 	using FGameServiceUser::StopWaitingForDependencies;
+	using FGameServiceUser::InvalidateCachedDependencies;
 
 	void SimulateTick()
 	{
-		PollPendingDependencyWaitCallbacks(this);
+		PollPendingDependencyWaitCallbacks();
 	}
+
+	// - FGameServiceUser
+	virtual FGameServiceUserConfig ConfigureGameServiceUser() const override
+	{
+		// This mock allows configurations to change, so the cache must be updated:
+		InvalidateCachedDependencies();
+
+		FGameServiceUserConfig Config(this);
+		Config.ServiceDependencies = ServiceDependencies;
+		Config.SubsystemDependencies = SubsystemDependencies;
+		Config.OptionalSubsystemDependencies = OptionalSubsystemDependencies;
+		return Config;
+	}
+	// --
+
+	FGameServiceDependencies ServiceDependencies;
+	FSubsystemDependencies SubsystemDependencies;
+	FSubsystemDependencies OptionalSubsystemDependencies;
 };

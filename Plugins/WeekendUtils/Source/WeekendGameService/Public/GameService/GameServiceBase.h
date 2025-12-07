@@ -41,6 +41,13 @@ class WEEKENDGAMESERVICE_API UGameServiceBase : public UObject, public FGameServ
 	GENERATED_BODY()
 
 public:
+	// - FGameServiceUser
+	virtual FGameServiceUserConfig ConfigureGameServiceUser() const override
+	{
+		return FGameServiceUserConfig(this);
+	}
+	// --
+
 	/**
 	 * Called when the service is started. All configured service dependencies are promised to already run at this point.
 	 * Services can be accessed via @UseService<>() or @FindOptionalService<>(), but subsystem dependencies might not yet
@@ -76,13 +83,6 @@ protected:
 	/** Defines how long a game service will stay alive. */
 	EGameServiceLifetime Lifetime = EGameServiceLifetime::ShutdownWithWorld;
 
-	/**
-	 * Marks this class to be replicated from the server to clients.
-	 * Supposed to be set in the constructor.
-	 * #todo-multiplayer CURRENTLY NOT SUPPORTED
-	 */
-	bool bReplicates = false;
-
 	// - FGameServiceUser
 	virtual void CheckGameServiceDependencies() const override;
 	// --
@@ -93,7 +93,7 @@ inline void UGameServiceBase::CheckGameServiceDependencies() const
 	if (Lifetime == EGameServiceLifetime::ShutdownWithWorld)
 		return; // World services can have dependencies to anything since they die first.
 
-	for (const TSubclassOf<UObject> DependencyClass : ServiceDependencies)
+	for (const TSubclassOf<UObject> DependencyClass : ConfigureGameServiceUser().ServiceDependencies)
 	{
 		const UGameServiceBase* ServiceDependency = DependencyClass->GetDefaultObject<UGameServiceBase>();
 		if (!ServiceDependency)

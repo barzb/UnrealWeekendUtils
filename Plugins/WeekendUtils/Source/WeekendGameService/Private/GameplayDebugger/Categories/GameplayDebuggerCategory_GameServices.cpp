@@ -30,7 +30,7 @@ FGameplayDebuggerCategory_GameServices::FGameplayDebuggerCategory_GameServices()
 
 void FGameplayDebuggerCategory_GameServices::CollectData(APlayerController* OwnerPC, AActor* DebugActor)
 {
-	const UGameServiceManager* GameServiceManager = UGameServiceManager::GetPtr();
+	const UGameServiceManager* GameServiceManager = UGameServiceManager::FindInstance(OwnerPC);
 	if (!IsValid(GameServiceManager))
 	{
 		AddTextLine("{red}<No GameServiceManager>");
@@ -62,7 +62,7 @@ void FGameplayDebuggerCategory_GameServices::CollectData(APlayerController* Owne
 		if (!GameServiceManager->WasServiceStarted(ServiceClass))
 		{
 			OfflineServicesInfo.Add(FString::Printf(TEXT("{grey}<Offline> {white}[{yellow}%s{white} | %s]"), *GetNameSafe(ServiceClass), *GetNameSafe(InstanceClass)));
-			OfflineServicesInfo += CollectServiceDependenciesInfo(ServiceClass);
+			OfflineServicesInfo += CollectServiceDependenciesInfo(*GameServiceManager, ServiceClass);
 			continue;
 		}
 
@@ -80,7 +80,7 @@ void FGameplayDebuggerCategory_GameServices::CollectData(APlayerController* Owne
 			GameServiceManager->IsServiceRunning(ServiceClass) ? TEXT("{green}<Running>") : TEXT("{orange}<Starting>"),
 			*StartOrderInfo, *GetNameSafe(ServiceClass), *GetNameSafe(InstanceClass),
 			*(IsValid(ServiceInstance) ? ServiceInstance->GetServiceStatusInfo().Get(FString()) : FString())));
-		StartedServicesInfo += CollectServiceDependenciesInfo(ServiceClass);
+		StartedServicesInfo += CollectServiceDependenciesInfo(*GameServiceManager, ServiceClass);
 	}
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -110,12 +110,12 @@ void FGameplayDebuggerCategory_GameServices::CollectData(APlayerController* Owne
 	}
 }
 
-TArray<FString> FGameplayDebuggerCategory_GameServices::CollectServiceDependenciesInfo(const FGameServiceClass& ServiceClass) const
+TArray<FString> FGameplayDebuggerCategory_GameServices::CollectServiceDependenciesInfo(const UGameServiceManager& GameServiceManager, const FGameServiceClass& ServiceClass) const
 {
 	if (!ShouldShowDependencies())
 		return {};
 
-	TOptional<FGameServiceInstanceClass> InstanceClass = UGameServiceManager::Get().FindRegisteredServiceInstanceClass(ServiceClass);
+	TOptional<FGameServiceInstanceClass> InstanceClass = GameServiceManager.FindRegisteredServiceInstanceClass(ServiceClass);
 	if (!InstanceClass.IsSet())
 		return {"{white}\t+ Dependencies: {red}???"};
 
@@ -127,8 +127,8 @@ TArray<FString> FGameplayDebuggerCategory_GameServices::CollectServiceDependenci
 	if (const TArray<FGameServiceClass>& Dependencies = ServiceClassCdo->GetServiceClassDependencies(); Dependencies.Num() > 0)
 	{
 		DependenciesInfo.Add_GetRef("{white}\t+ Depends on Services: ")
-			+= FString::JoinBy(Dependencies, TEXT("{white}, "), [](const FGameServiceClass& Dependency) {
-				return FString::Printf(TEXT("{%s}%s"), *BoolToCyanOrOrange(UGameServiceManager::Get().IsServiceRunning(Dependency)), *GetNameSafe(Dependency));
+			+= FString::JoinBy(Dependencies, TEXT("{white}, "), [&GameServiceManager](const FGameServiceClass& Dependency) {
+				return FString::Printf(TEXT("{%s}%s"), *BoolToCyanOrOrange(GameServiceManager.IsServiceRunning(Dependency)), *GetNameSafe(Dependency));
 			});
 	}
 

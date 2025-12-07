@@ -11,15 +11,16 @@
 
 #include "SaveGame/SaveGameService.h"
 
-URestorableGameServiceBase::URestorableGameServiceBase()
+FGameServiceUserConfig URestorableGameServiceBase::ConfigureGameServiceUser() const
 {
-	ServiceDependencies.Add<USaveGameService>();
+	return Super::ConfigureGameServiceUser()
+		.AddServiceDependency<USaveGameService>();
 }
 
 void URestorableGameServiceBase::BeginServiceStart()
 {
 	bIsWaitingForSaveGameRestore = true;
-	SaveGameService = UseGameServiceAsWeakPtr<USaveGameService>(this);
+	SaveGameService = UseGameServiceAsWeakPtr<USaveGameService>();
 	SaveGameService->OnBeforeSaved.AddUObject(this, &ThisClass::WriteToSaveGame);
 	SaveGameService->OnAfterRestored.AddUObject(this, &ThisClass::HandleSaveGameLoaded);
 

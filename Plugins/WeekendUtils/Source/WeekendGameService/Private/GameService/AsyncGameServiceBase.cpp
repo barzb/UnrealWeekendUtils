@@ -19,7 +19,7 @@ void UAsyncGameServiceBase::StartService()
 
 void UAsyncGameServiceBase::AttemptToStartService()
 {
-	bIsWaitingForDependencies = (bWaitForDependenciesBeforeStarting && !AreAllDependenciesReady(this));
+	bIsWaitingForDependencies = (bWaitForDependenciesBeforeStarting && !AreAllDependenciesReady());
 	bIsWaitingForWorldToBeginPlay = (bWaitForWorldToBeginPlay && !GetWorld()->HasBegunPlay());
 	const bool bIsReadyToStart = (!bIsWaitingForDependencies && !bIsWaitingForWorldToBeginPlay);
 
@@ -38,7 +38,7 @@ void UAsyncGameServiceBase::AttemptToStartService()
 
 	if (bIsWaitingForDependencies)
 	{
-		WaitForDependencies(this, FOnWaitingFinished::CreateUObject(this, &UAsyncGameServiceBase::AttemptToStartService));
+		WaitForDependencies(FOnWaitingFinished::CreateUObject(this, &UAsyncGameServiceBase::AttemptToStartService));
 	}
 
 	if (bIsWaitingForWorldToBeginPlay)
@@ -60,7 +60,7 @@ void UAsyncGameServiceBase::WaitForWorldToBeginPlay(UWorld& World)
 
 void UAsyncGameServiceBase::ShutdownService()
 {
-	StopWaitingForDependencies(this);
+	StopWaitingForDependencies();
 
 	const bool bIsWorldTearingDown = (!IsValid(GetWorld()) && GetWorld()->bIsTearingDown);
 	if (!bIsWorldTearingDown)

@@ -28,8 +28,8 @@ class UGameServiceConfig;
  * - Shutdown relevant running services when the world tears down
  * - Clears relevant registered service configs when the world tears down
  */
-UCLASS()
-class UWorldGameServiceRunner : public UTickableWorldSubsystem
+UCLASS(MinimalAPI)
+class UWorldGameServiceRunner final : public UTickableWorldSubsystem
 {
 	GENERATED_BODY()
 
@@ -49,6 +49,6 @@ public:
 private:
 	void RegisterAutoServiceConfigs();
 	void StartRegisteredServices();
-	static void TickRunningServices(float DeltaTime);
-	static TArray<TSubclassOf<UWorldSubsystem>> GatherWorldSubsystemDependencies();
+	void TickRunningServices(float DeltaTime);
+	TArray<TSubclassOf<UWorldSubsystem>> GatherWorldSubsystemDependencies() const;
 };

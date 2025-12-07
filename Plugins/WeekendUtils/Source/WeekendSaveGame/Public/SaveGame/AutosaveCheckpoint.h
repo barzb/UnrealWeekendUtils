@@ -31,6 +31,8 @@ class WEEKENDSAVEGAME_API AAutosaveCheckpoint : public APlayerStart, public FGam
 public:
 	AAutosaveCheckpoint(const FObjectInitializer& ObjectInitializer);
 
+	// - FGameServiceUser
+	virtual FGameServiceUserConfig ConfigureGameServiceUser() const override;
 	// - APlayerStart
 	virtual void PostInitProperties() override;
 #if WITH_EDITOR

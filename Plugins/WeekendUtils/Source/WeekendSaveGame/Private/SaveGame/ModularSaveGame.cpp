@@ -21,18 +21,18 @@
 ///////////////////////////////////////////////////////////////////////////////////////
 /// @UModularSaveGame
 
-const UModularSaveGame* UModularSaveGame::GetCurrent()
+const UModularSaveGame* UModularSaveGame::FindCurrent(const UObject* WorldContext)
 {
-	const USaveGameService* SaveGameService = UGameServiceLocator::FindService<USaveGameService>();
+	const USaveGameService* SaveGameService = UGameServiceLocator::FindService<USaveGameService>(WorldContext);
 	if (!SaveGameService)
 		return nullptr;
 
 	return SaveGameService->GetCurrentSaveGame().GetPtr<UModularSaveGame>();
 }
 
-UModularSaveGame* UModularSaveGame::GetMutableCurrent()
+UModularSaveGame* UModularSaveGame::FindMutableCurrent(const UObject* WorldContext)
 {
-	const USaveGameService* SaveGameService = UGameServiceLocator::FindService<USaveGameService>();
+	const USaveGameService* SaveGameService = UGameServiceLocator::FindService<USaveGameService>(WorldContext);
 	if (!SaveGameService)
 		return nullptr;
 

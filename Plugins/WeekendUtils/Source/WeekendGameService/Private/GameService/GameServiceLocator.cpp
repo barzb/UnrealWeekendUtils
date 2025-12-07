@@ -12,19 +12,19 @@
 #include "GameService/GameServiceBase.h"
 #include "GameService/GameServiceManager.h"
 
-UObject* UGameServiceLocator::FindService_ByInterfaceClass(TSubclassOf<UInterface> ServiceInterfaceClass)
+UObject* UGameServiceLocator::FindService_ByInterfaceClass(const UObject* WorldContext, TSubclassOf<UInterface> ServiceInterfaceClass)
 {
-	return FindServiceInternal(*ServiceInterfaceClass);
+	return FindServiceInternal(WorldContext, *ServiceInterfaceClass);
 }
 
-UObject* UGameServiceLocator::FindService_ByGameServiceClass(TSubclassOf<UGameServiceBase> ServiceClass)
+UObject* UGameServiceLocator::FindService_ByGameServiceClass(const UObject* WorldContext, TSubclassOf<UGameServiceBase> ServiceClass)
 {
-	return FindServiceInternal(*ServiceClass);
+	return FindServiceInternal(WorldContext, *ServiceClass);
 }
 
-UObject* UGameServiceLocator::FindServiceInternal(const TSubclassOf<UObject>& ServiceClass)
+UObject* UGameServiceLocator::FindServiceInternal(const UObject* WorldContext, const TSubclassOf<UObject>& ServiceClass)
 {
-	const UGameServiceManager* GameServiceManager = UGameServiceManager::GetPtr();
+	const UGameServiceManager* GameServiceManager = UGameServiceManager::FindInstance(WorldContext);
 	if (!IsValid(GameServiceManager))
 		return nullptr;
 

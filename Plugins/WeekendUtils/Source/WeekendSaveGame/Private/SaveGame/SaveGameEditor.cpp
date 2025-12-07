@@ -47,8 +47,12 @@ void USaveGameEditor::OpenSaveGameEditor(const USaveGame* SaveGame)
 
 void USaveGameEditor::OpenSaveGameEditorForCurrentSaveGame()
 {
+	const FWorldContext* WorldContext = GEngine->GetWorldContextFromPIEInstance(0);
+	if (!WorldContext)
+		return;
+
 	const USaveGame* SaveGame = nullptr;
-	if (const USaveGameService* SaveGameService = UGameServiceLocator::FindService<USaveGameService>())
+	if (const USaveGameService* SaveGameService = UGameServiceLocator::FindService<USaveGameService>(WorldContext->World()))
 	{
 		const FCurrentSaveGame& CurrentSaveGame = SaveGameService->GetCurrentSaveGame();
 		SaveGame = CurrentSaveGame.GetPtr();
@@ -84,7 +88,11 @@ void USaveGameEditor::ConvertToPreset()
 
 void USaveGameEditor::EditCurrentSaveGame()
 {
-	if (const USaveGameService* SaveGameService = UGameServiceLocator::FindService<USaveGameService>())
+	const FWorldContext* WorldContext = GEngine->GetWorldContextFromPIEInstance(0);
+	if (!WorldContext)
+		return;
+
+	if (const USaveGameService* SaveGameService = UGameServiceLocator::FindService<USaveGameService>(WorldContext->World()))
 	{
 		const FCurrentSaveGame& CurrentSaveGame = SaveGameService->GetCurrentSaveGame();
 		SetSaveGame(CurrentSaveGame.GetPtr(), FString("(Current SaveGame)"));

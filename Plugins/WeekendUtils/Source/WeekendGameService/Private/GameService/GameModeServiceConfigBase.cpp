@@ -19,6 +19,9 @@ namespace
 
 void UGameModeServiceConfigBase::RegisterFor(const TSubclassOf<AGameModeBase>& GameModeClass)
 {
+	ensureMsgf(GameModeClass != AGameModeBase::StaticClass(),
+		TEXT("Cannot register %s for AGameModeBase, because it would be configured for ALL worlds, including AutomationTestWorlds. Please configure a subclass of AGameModeBase."), *GetName());
+
 	if (!HasAnyFlags(RF_ClassDefaultObject))
 		return;
 

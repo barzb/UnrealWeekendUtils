@@ -19,7 +19,7 @@ DEFINE_CHEAT_COLLECTION(WeekendSaveGameCheats, AsCheatMenuTab("Save/Load"))
 	.DisplayAs("Autosave")
 	DEFINE_CHEAT_EXECUTE(AutosaveCheat)
 	{
-		USaveGameService* SaveGameService = UGameServiceLocator::FindService<USaveGameService>();
+		USaveGameService* SaveGameService = UGameServiceLocator::FindService<USaveGameService>(GetWorld());
 		if (LogInvalidity(SaveGameService, "SaveGameService not available"))
 			return;
 
@@ -30,7 +30,7 @@ DEFINE_CHEAT_COLLECTION(WeekendSaveGameCheats, AsCheatMenuTab("Save/Load"))
 	.DisplayAs("Load Autosave")
 	DEFINE_CHEAT_EXECUTE(LoadAutosaveCheat)
 	{
-		USaveGameService* SaveGameService = UGameServiceLocator::FindService<USaveGameService>();
+		USaveGameService* SaveGameService = UGameServiceLocator::FindService<USaveGameService>(GetWorld());
 		if (LogInvalidity(SaveGameService, "SaveGameService not available"))
 			return;
 
@@ -42,7 +42,7 @@ DEFINE_CHEAT_COLLECTION(WeekendSaveGameCheats, AsCheatMenuTab("Save/Load"))
 	.DisplayAs("Open SaveGame Editor")
 	DEFINE_CHEAT_EXECUTE(OpenSaveGameEditorCheat)
 	{
-		const USaveGameService* SaveGameService = UGameServiceLocator::FindService<USaveGameService>();
+		const USaveGameService* SaveGameService = UGameServiceLocator::FindService<USaveGameService>(GetWorld());
 		if (LogInvalidity(SaveGameService, "SaveGameService not available"))
 			return;
 

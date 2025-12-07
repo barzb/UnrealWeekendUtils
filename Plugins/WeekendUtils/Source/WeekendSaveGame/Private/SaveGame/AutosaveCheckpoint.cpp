@@ -21,8 +21,6 @@ AAutosaveCheckpoint::AAutosaveCheckpoint(const FObjectInitializer& ObjectInitial
 {
 	PrimaryActorTick.bCanEverTick = false;
 
-	ServiceDependencies.Add<USaveGameService>();
-
 	GetCapsuleComponent()->bDrawOnlyIfSelected = false;
 
 #if WITH_EDITORONLY_DATA
@@ -37,6 +35,12 @@ AAutosaveCheckpoint::AAutosaveCheckpoint(const FObjectInitializer& ObjectInitial
 	CheckpointNameRenderer->WorldSize = 18;
 	CheckpointNameRenderer->bHiddenInGame = true;
 #endif
+}
+
+FGameServiceUserConfig AAutosaveCheckpoint::ConfigureGameServiceUser() const
+{
+	return FGameServiceUserConfig(this)
+		.AddServiceDependency<USaveGameService>();
 }
 
 void AAutosaveCheckpoint::PostInitProperties()
@@ -69,7 +73,7 @@ void AAutosaveCheckpoint::RequestAutosaveHere()
 	SaveGameModule->WorldCoordinates = GetActorTransform();
 
 	UE_LOG(LogAutosaveCheckpoint, Log, TEXT("Requesting autosave at %s with PlayerStartTag: %s"), *GetName(), *PlayerStartTag.ToString());
-	UseGameService<USaveGameService>(this).RequestAutosave("AAutosaveCheckpoint::RequestAutosaveHere @ " + PlayerStartTag.ToString());
+	UseGameService<USaveGameService>().RequestAutosave("AAutosaveCheckpoint::RequestAutosaveHere @ " + PlayerStartTag.ToString());
 }
 
 void AAutosaveCheckpoint::SetPlayerStartTag(const FName& NewPlayerStartTag)

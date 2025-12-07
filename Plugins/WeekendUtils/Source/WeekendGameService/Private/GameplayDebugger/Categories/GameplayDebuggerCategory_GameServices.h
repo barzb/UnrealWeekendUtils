@@ -16,6 +16,8 @@
 #include "GameplayDebugger/GameplayDebuggerUtils.h"
 #include "GameplayDebuggerCategory.h"
 
+class UGameServiceManager;
+
 class FGameplayDebuggerCategory_GameServices final : public FGameplayDebuggerCategory
 {
 public:
@@ -30,7 +32,7 @@ private:
 	void ToggleShowDependencies();
 	static bool ShouldShowDependencies();
 
-	TArray<FString> CollectServiceDependenciesInfo(const FGameServiceClass& ServiceClass) const;
+	TArray<FString> CollectServiceDependenciesInfo(const UGameServiceManager& GameServiceManager, const FGameServiceClass& ServiceClass) const;
 
 	static FString BoolToCyanOrOrange(bool bUseCyanOverOrange);
 };

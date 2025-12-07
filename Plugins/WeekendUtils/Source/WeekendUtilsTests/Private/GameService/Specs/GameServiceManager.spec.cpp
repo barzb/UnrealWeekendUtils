@@ -29,8 +29,7 @@ WE_END_DEFINE_SPEC(GameServiceManager)
 	{
 		TestWorld = MakeShared<FScopedAutomationTestWorld>(SpecTestWorldName);
 		TestWorld->InitializeGame();
-		ServiceManager = UGameServiceManager::GetPtr();
-		ServiceManager->ClearServiceRegister(EGameServiceLifetime::ShutdownWithWorld); // Clear registrations from auto configs.
+		ServiceManager = UGameServiceManager::FindInstance(TestWorld->AsPtr());
 	});
 
 	AfterEach([this]
@@ -95,12 +94,13 @@ WE_END_DEFINE_SPEC(GameServiceManager)
 
 			UGameServiceConfig* Config99 = NewObject<UGameServiceConfig>(TestWorld->AsPtr());
 			Config99->AddService<UVoidService, UVoidService2>();
-			Config99->AddService<UVoidObserverFanService>();
+			Config99->AddService<UVoidObserverService>();
 			Config99->SetPriority(99);
 
 			UGameServiceConfig* Config101 = NewObject<UGameServiceConfig>(TestWorld->AsPtr());
 			Config101->AddService<UVoidService, UVoidService2>();
 			Config101->AddService<UVoidObserverService>();
+			Config101->AddService<UVoidObserverFanService>();
 			Config101->SetPriority(101);
 
 			UGameServiceConfig* Config101_2 = NewObject<UGameServiceConfig>(TestWorld->AsPtr());
@@ -118,7 +118,6 @@ WE_END_DEFINE_SPEC(GameServiceManager)
 			RegisteredInstanceClasses = ServiceManager->GetAllRegisteredServiceInstanceClasses();
 			TestTrue("UVoidService in RegisteredInstanceClasses", RegisteredInstanceClasses.Contains<UVoidService>());
 			TestFalse("UVoidService2 in RegisteredInstanceClasses", RegisteredInstanceClasses.Contains<UVoidService2>());
-			TestTrue("UVoidObserverFanService in RegisteredInstanceClasses", RegisteredInstanceClasses.Contains<UVoidObserverFanService>());
 
 			ServiceManager->RegisterServices(*Config101);
 			RegisteredInstanceClasses = ServiceManager->GetAllRegisteredServiceInstanceClasses();

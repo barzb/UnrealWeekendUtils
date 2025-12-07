@@ -32,13 +32,13 @@ WE_END_DEFINE_SPEC(SaveGameService)
 		TestWorld = MakeShared<FScopedAutomationTestWorld>(SpecTestWorldName);
 		TestWorld->InitializeGame();
 
-		SaveGameService = &UGameServiceManager::Get().StartService<USaveGameService>(TestWorld->AsRef());
+		SaveGameService = &UGameServiceManager::SummonInstance(TestWorld->AsPtr()).StartService<USaveGameService>(TestWorld->AsRef());
 		SaveGameSerializer = SaveGameService->GetSaveGameSerializer<UMockSaveGameSerializer>();
 	});
 
 	AfterEach([this]
 	{
-		UGameServiceManager::Get().ShutdownAllServices();
+		UGameServiceManager::SummonInstance(TestWorld->AsPtr()).ShutdownAllServices();
 		SaveGameService = nullptr;
 		TestWorld.Reset();
 	});
