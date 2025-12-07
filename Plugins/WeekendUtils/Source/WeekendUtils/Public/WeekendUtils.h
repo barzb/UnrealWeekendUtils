@@ -12,9 +12,6 @@
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogGameService, Log, All);
-DECLARE_STATS_GROUP(TEXT("Game Service"), STATGROUP_GameService, STATCAT_Advanced);
-
 class FWeekendUtilsModule : public IModuleInterface
 {
 public:

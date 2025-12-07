@@ -25,8 +25,11 @@ public class WeekendUtilsTests : ModuleRules
 			new string[]
 			{
 				"CoreUObject",
-				"WeekendUtils",
 				"Engine",
+				"WeekendCheatMenu",
+				"WeekendGameService",
+				"WeekendSaveGame",
+				"WeekendUtils",
 			}
 		);
 	}

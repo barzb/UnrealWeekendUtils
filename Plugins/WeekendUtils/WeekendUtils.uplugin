@@ -14,10 +14,25 @@
 	"IsBetaVersion": false,
 	"IsExperimentalVersion": false,
 	"Installed": true,
-	"EnabledByDefault": true,
+	"EnabledByDefault": false,
 	"Modules": [
 		{
 			"Name": "WeekendUtils",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "WeekendCheatMenu",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "WeekendGameService",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "WeekendSaveGame",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		},
